@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=TVHadmin VLC
+Comment=Launch VLC from TVHadmin and Backspace to return to the menu
+Exec=python3 /usr/share/tvheadend/src/webui/static/TVHadmin-JS/scripts/tvhadmin_vlc_app.py
+Path=/usr/share/tvheadend/src/webui/static/TVHadmin-JS/scripts
+Icon=applications-multimedia
+Terminal=false
+Categories=AudioVideo;Player;
+StartupNotify=true

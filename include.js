@@ -196,7 +196,7 @@ function show_vlc_launch_hint(absUrl, mode) {
   if (mode === 'helper') {
     body =
       '<div class="tvh-vlc-hint-title">VLC started</div>' +
-      '<div class="tvh-vlc-hint-text">While watching VLC: press <b>Backspace</b> on the remote/keyboard — the helper minimizes VLC and opens Pale Moon with the menu (each Backspace is logged in the helper terminal). Or use <b>Menu</b> / ☰ / <b>Home</b> / <b>F2</b>.</div>';
+      '<div class="tvh-vlc-hint-text">While watching VLC: press <b>Backspace</b> — the <b>TVHadmin VLC</b> app minimizes VLC and opens Pale Moon with the menu (each press appears in the app Activity log). Or use <b>Menu</b> / ☰ / <b>Home</b> / <b>F2</b>.</div>';
   } else if (mode === 'helper-missing') {
     body =
       '<div class="tvh-vlc-hint-title">VLC helper not running</div>' +

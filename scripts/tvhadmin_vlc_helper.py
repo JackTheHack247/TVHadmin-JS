@@ -155,6 +155,44 @@ _hotkey_menu_pending = False
 _last_hotkey_at = 0.0
 HOTKEY_DEBOUNCE_SEC = 0.5
 _hotkeys_enabled = False
+_server = None
+_ui_log = None
+
+
+def set_ui_log(callback):
+    """Register a thread-safe callback(line) for the desktop app log window."""
+    global _ui_log
+    _ui_log = callback
+
+
+def _safe_stderr_write(text):
+    """Write to real stderr (never a Tk Text .write shim)."""
+    stream = getattr(sys, "__stderr__", None) or sys.stderr
+    try:
+        stream.write(text)
+    except TypeError:
+        try:
+            stream.write(text.rstrip("\n"))
+            stream.write("\n")
+        except Exception:
+            pass
+    except Exception:
+        pass
+    try:
+        stream.flush()
+    except Exception:
+        pass
+
+
+def log_event(message):
+    line = "[%s] %s" % (time.strftime("%H:%M:%S"), message)
+    if _ui_log:
+        try:
+            _ui_log(line)
+        except Exception as exc:
+            _safe_stderr_write("UI log failed: %s\n" % exc)
+    if _ui_log is None or os.environ.get("TVHADMIN_LOG_STDERR") == "1":
+        _safe_stderr_write(line + "\n")
 
 
 def set_hotkey_menu_pending():
@@ -278,28 +316,21 @@ def minimize_vlc():
 
 def on_global_backspace_key():
     global _last_hotkey_at
-    sys.stderr.write("[tvhadmin-vlc-helper] Backspace key detected\n", flush=True)
+    log_event("Backspace key detected")
     now = time.time()
     if now - _last_hotkey_at < HOTKEY_DEBOUNCE_SEC:
-        sys.stderr.write(
-            "[tvhadmin-vlc-helper] Backspace ignored (debounce)\n",
-            flush=True,
-        )
+        log_event("Backspace ignored (debounce)")
         return
     _last_hotkey_at = now
     if not should_handle_menu_hotkey():
         vlc_focus = active_window_is_vlc()
         vlc_run = vlc_window_exists()
-        sys.stderr.write(
-            "[tvhadmin-vlc-helper] Backspace ignored (VLC focused=%s, VLC running=%s)\n"
-            % (vlc_focus, vlc_run),
-            flush=True,
+        log_event(
+            "Backspace ignored (VLC focused=%s, VLC running=%s)"
+            % (vlc_focus, vlc_run)
         )
         return
-    sys.stderr.write(
-        "[tvhadmin-vlc-helper] Backspace — minimize VLC, raise Pale Moon, open menu\n",
-        flush=True,
-    )
+    log_event("Backspace — minimize VLC, raise Pale Moon, open menu")
     minimize_vlc()
     raise_browser_window()
     set_hotkey_menu_pending()
@@ -326,10 +357,8 @@ def _evdev_hotkey_loop():
             continue
 
     if not devices:
-        sys.stderr.write(
-            "[tvhadmin-vlc-helper] Global hotkeys: no keyboard device "
-            "(sudo apt install python3-evdev; add user to group input, re-login)\n",
-            flush=True,
+        log_event(
+            "Global hotkeys: no keyboard (install python3-evdev; user in group input)"
         )
         return False
 
@@ -341,10 +370,7 @@ def _evdev_hotkey_loop():
 
     global _hotkeys_enabled
     _hotkeys_enabled = True
-    sys.stderr.write(
-        "[tvhadmin-vlc-helper] Global hotkeys active: Backspace (logged on each press)\n",
-        flush=True,
-    )
+    log_event("Global hotkeys active: Backspace")
     while True:
         try:
             ready, _, _ = select.select(devices, [], [], 1.0)
@@ -365,7 +391,7 @@ def _evdev_hotkey_loop():
 def start_global_hotkey_listener():
     global _hotkeys_enabled
     if os.environ.get("TVHADMIN_HOTKEYS", "1") in ("0", "false", "no"):
-        sys.stderr.write("[tvhadmin-vlc-helper] Global hotkeys disabled (TVHADMIN_HOTKEYS=0)\n")
+        log_event("Global hotkeys disabled (TVHADMIN_HOTKEYS=0)")
         return
 
     def runner():
@@ -377,7 +403,7 @@ def start_global_hotkey_listener():
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
-        sys.stderr.write("[tvhadmin-vlc-helper] %s\n" % (fmt % args))
+        pass
 
     def _cors(self):
         origin = self.headers.get("Origin")
@@ -426,6 +452,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             launch_vlc(url, title=title, fullscreen=fullscreen)
+            log_event("VLC play: %s" % (title or url[:80]))
         except FileNotFoundError:
             self.send_response(500)
             self._cors()
@@ -538,35 +565,41 @@ def port_in_use_error(err):
     return False
 
 
-def main():
-    port = DEFAULT_PORT
-    if len(sys.argv) > 1:
-        port = int(sys.argv[1])
+def run_helper(port=DEFAULT_PORT):
+    global _server
     try:
         server = ReuseHTTPServer((BIND, port), Handler)
     except OSError as exc:
         if port_in_use_error(exc):
-            sys.stderr.write(
-                "[tvhadmin-vlc-helper] Port %s is already in use on %s.\n"
-                % (port, BIND)
-            )
-            sys.stderr.write(
-                "  If the helper is already running, you do not need to start it again.\n"
-                "  Check: curl -s http://127.0.0.1:%s/health\n"
-                % port
-            )
-            sys.stderr.write(
-                "  To restart after an update: pkill -f tvhadmin_vlc_helper.py\n"
-                "  then run start-vlc-helper.sh again, or: sh start-vlc-helper.sh --restart\n"
-            )
+            log_event("Port %s already in use — helper may already be running" % port)
             raise SystemExit(1)
         raise
+    _server = server
     start_global_hotkey_listener()
-    print("TVHadmin VLC helper on http://%s:%s (Ctrl+C to stop)" % (BIND, port), flush=True)
+    log_event("Listening on http://%s:%s" % (BIND, port))
+    server.serve_forever()
+
+
+def stop_helper():
+    global _server
+    if _server:
+        threading.Thread(target=_server.shutdown, daemon=True).start()
+
+
+def hotkeys_enabled():
+    return _hotkeys_enabled
+
+
+def main():
+    port = DEFAULT_PORT
+    args = [a for a in sys.argv[1:] if a.isdigit()]
+    if args:
+        port = int(args[0])
+    os.environ.setdefault("TVHADMIN_LOG_STDERR", "1")
     try:
-        server.serve_forever()
+        run_helper(port)
     except KeyboardInterrupt:
-        print("\nStopped.", flush=True)
+        log_event("Stopped")
 
 
 if __name__ == "__main__":
