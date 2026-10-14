@@ -73,3 +73,15 @@ TVHadmin stores user preferences in Local Storage on the client, and uses Sessio
 - Dates and times are shown in the appropriate format for your browser language; if the format is incorrect then check your browser settings. There is no internationalisation of text.
 
 TVHADMIN_HOTKEY_WHEN_VLC_RUNNING=1 sh start-vlc-helper.sh --restart
+
+- - - - - - - - - - - - - - - - - 
+
+sudo apt install python3-tk python3-evdev wmctrl xdotool
+
+sudo usermod -aG input $USER
+
+# log out and back in
+
+cd /usr/share/tvheadend/src/webui/static/TVHadmin-JS/scripts
+
+sh install-tvhadmin-vlc-app.sh
