@@ -71,3 +71,5 @@ TVHadmin stores user preferences in Local Storage on the client, and uses Sessio
 - All timers created by TVHadmin use the same recording profile (the one set in the Config screen).
 - Some screens supply extra information as hover text. This is not accessible from mobile clients.
 - Dates and times are shown in the appropriate format for your browser language; if the format is incorrect then check your browser settings. There is no internationalisation of text.
+
+TVHADMIN_HOTKEY_WHEN_VLC_RUNNING=1 sh start-vlc-helper.sh --restart
