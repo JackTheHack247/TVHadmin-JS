@@ -56,6 +56,8 @@ class TvhadminVlcApp(object):
         sys.stderr = SafeLogStream(self._thread_safe_log)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._start_helper()
+        if "--show" not in sys.argv:
+            self.root.after(4000, self.root.iconify)
 
     def _build_ui(self):
         top = ttk.Frame(self.root, padding=8)
@@ -65,7 +67,8 @@ class TvhadminVlcApp(object):
         ttk.Label(top, textvariable=self.status_var).pack(anchor=tk.W)
         ttk.Label(
             top,
-            text="Backspace: sends F to VLC (leave fullscreen), opens Pale Moon, then sidebar menu. Backspace again returns to VLC.",
+            text="Backspace: presses F in VLC (leave fullscreen), opens Pale Moon menu. Backspace again returns to VLC. "
+            "This window minimizes itself after a few seconds; click it in the taskbar to see the log.",
             wraplength=440,
         ).pack(anchor=tk.W, pady=(4, 0))
 

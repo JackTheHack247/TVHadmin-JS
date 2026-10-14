@@ -35,6 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
+VERSION = "4"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -210,13 +211,51 @@ def window_is_fullscreen(wid):
     return "_NET_WM_STATE_FULLSCREEN" in out
 
 
+def window_class(wid):
+    for w, cls, line in list_windows():
+        if _same_window(w, wid):
+            return cls
+    return ""
+
+
+def is_app_window(wid):
+    return APP_WM_CLASS in window_class(wid)
+
+
 def activate_window(wid):
+    if not wid or is_app_window(wid):
+        return False
     if _ok(["wmctrl", "-ia", wid]):
         return True
     try:
         return _ok(["xdotool", "windowactivate", "--sync", str(int(wid, 16))], timeout=3)
     except ValueError:
         return False
+
+
+def focus_is_vlc():
+    active = active_window_id()
+    if not active:
+        return False
+    return any(_same_window(active, w) for w in vlc_window_ids())
+
+
+def focus_vlc_window(wid):
+    """Activate VLC and wait until it really has keyboard focus."""
+    for attempt in range(8):
+        if attempt == 0:
+            activate_window(wid)
+        elif attempt == 3:
+            try:
+                n = str(int(wid, 16))
+                _ok(["xdotool", "windowactivate", "--sync", n], timeout=3)
+                _ok(["xdotool", "windowfocus", "--sync", n], timeout=3)
+            except ValueError:
+                pass
+        time.sleep(0.1)
+        if focus_is_vlc():
+            return True
+    return False
 
 
 def pick_vlc_window():
@@ -269,10 +308,17 @@ def vlc_press_f():
     global _vlc_fullscreen
     wid = pick_vlc_window()
     if wid:
-        activate_window(wid)
+        if not focus_vlc_window(wid):
+            active = active_window_id()
+            log_event(
+                "Did NOT press F: VLC would not take focus (focused window: %s)"
+                % (window_class(active) if active else "unknown")
+            )
+            return False
     elif not _wlr_focus("app_id:vlc"):
         return False
-    time.sleep(0.25)
+    else:
+        time.sleep(0.25)
     ok = press_key_in_focused_window("f")
     if ok:
         _vlc_fullscreen = not _vlc_fullscreen
@@ -668,6 +714,7 @@ def run_helper(port=DEFAULT_PORT):
             raise SystemExit(1)
         raise
     _server = server
+    log_event("TVHadmin Remote helper version %s" % VERSION)
     environment_report()
     start_global_hotkey_listener()
     log_event("Listening on http://%s:%s" % (BIND, port))
