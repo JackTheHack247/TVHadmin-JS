@@ -151,7 +151,8 @@ def raise_browser_window():
 
 
 _hotkey_lock = threading.Lock()
-_hotkey_menu_pending = False
+_hotkey_action = None
+_tv_ui_mode = "video"
 _last_hotkey_at = 0.0
 HOTKEY_DEBOUNCE_SEC = 0.5
 _hotkeys_enabled = False
@@ -195,18 +196,23 @@ def log_event(message):
         _safe_stderr_write(line + "\n")
 
 
-def set_hotkey_menu_pending():
-    global _hotkey_menu_pending
+def set_hotkey_action(action):
+    global _hotkey_action
     with _hotkey_lock:
-        _hotkey_menu_pending = True
+        _hotkey_action = action
 
 
-def consume_hotkey_menu_pending():
-    global _hotkey_menu_pending
+def consume_hotkey_action():
+    global _hotkey_action
     with _hotkey_lock:
-        pending = _hotkey_menu_pending
-        _hotkey_menu_pending = False
-        return pending
+        action = _hotkey_action
+        _hotkey_action = None
+        return action
+
+
+def set_tv_ui_mode(mode):
+    global _tv_ui_mode
+    _tv_ui_mode = mode if mode in ("video", "menu") else _tv_ui_mode
 
 
 def active_window_is_vlc():
@@ -266,25 +272,39 @@ def vlc_window_exists():
         return False
 
 
-def should_handle_menu_hotkey():
-    if active_window_is_vlc():
-        return True
-    if os.environ.get("TVHADMIN_HOTKEY_WHEN_VLC_RUNNING") == "1" and vlc_window_exists():
-        return True
-    return False
-
-
-def minimize_vlc():
-    commands = [
-        ["wmctrl", "-x", "-r", "vlc.bin", "-b", "add,hidden"],
-        ["wmctrl", "-x", "-r", "vlc", "-b", "add,hidden"],
-        ["wmctrl", "-r", "VLC media player", "-b", "iconic,hidden"],
-    ]
-    for cmd in commands:
+def browser_is_focused():
+    tokens = (
+        "pale moon",
+        "tvhadmin",
+        "tvheadend",
+        "firefox",
+        "navigator",
+        "chromium",
+    )
+    extra = os.environ.get("TVHADMIN_WM_TITLE", "").strip().lower()
+    if extra:
+        tokens = (extra,) + tokens
+    try:
+        wid = subprocess.check_output(
+            ["xdotool", "getactivewindow"],
+            stderr=subprocess.DEVNULL,
+            timeout=1,
+        ).decode("utf-8", errors="ignore").strip()
+        if not wid or wid == "0":
+            return False
+        blob = subprocess.check_output(
+            ["xprop", "-id", wid, "WM_CLASS", "WM_NAME"],
+            stderr=subprocess.DEVNULL,
+            timeout=1,
+        ).decode("utf-8", errors="ignore").lower()
+        return any(t in blob for t in tokens)
+    except Exception:
+        pass
+    for title in ("Pale Moon", "TVHadmin", "TVHeadend"):
         try:
             if (
                 subprocess.call(
-                    cmd,
+                    ["wmctrl", "-a", title],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
@@ -295,45 +315,177 @@ def minimize_vlc():
             break
         except Exception:
             pass
+    return False
+
+
+def vlc_window_ids():
+    ids = []
+    try:
+        out = subprocess.check_output(
+            ["wmctrl", "-lx"],
+            stderr=subprocess.DEVNULL,
+            timeout=1,
+        ).decode("utf-8", errors="ignore")
+        for line in out.splitlines():
+            low = line.lower()
+            if "vlc.bin" in low or " vlc" in low or ".vlc" in low:
+                parts = line.split(None, 4)
+                if parts:
+                    ids.append(parts[0])
+    except Exception:
+        pass
+    if ids:
+        return ids
     try:
         wids = subprocess.check_output(
             ["xdotool", "search", "--class", "vlc"],
             stderr=subprocess.DEVNULL,
             timeout=1,
         ).decode("utf-8", errors="ignore").split()
-        for wid in wids:
+        return [w for w in wids if w.strip()]
+    except Exception:
+        return []
+
+
+def minimize_vlc():
+    ok = False
+    for wid in vlc_window_ids():
+        for args in (
+            ["wmctrl", "-ir", wid, "-b", "add,hidden"],
+            ["wmctrl", "-ir", wid, "-b", "add,iconic"],
+        ):
+            try:
+                if (
+                    subprocess.call(
+                        args,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    == 0
+                ):
+                    ok = True
+            except FileNotFoundError:
+                return ok
+            except Exception:
+                pass
+        try:
             subprocess.call(
                 ["xdotool", "windowminimize", wid],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+            ok = True
+        except Exception:
+            pass
+    for cmd in (
+        ["wmctrl", "-x", "-r", "vlc.bin", "-b", "add,hidden"],
+        ["wmctrl", "-x", "-r", "vlc", "-b", "add,hidden"],
+    ):
+        try:
+            if (
+                subprocess.call(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                == 0
+            ):
+                ok = True
+        except FileNotFoundError:
+            break
+        except Exception:
+            pass
+    return ok
+
+
+def restore_vlc():
+    ok = False
+    for wid in vlc_window_ids():
+        for args in (
+            ["wmctrl", "-ir", wid, "-b", "remove,hidden"],
+            ["wmctrl", "-ir", wid, "-b", "remove,iconic"],
+        ):
+            try:
+                if (
+                    subprocess.call(
+                        args,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    == 0
+                ):
+                    ok = True
+            except FileNotFoundError:
+                return ok
+            except Exception:
+                pass
+    for cmd in (
+        ["wmctrl", "-xa", "vlc.bin"],
+        ["wmctrl", "-x", "-a", "vlc.bin"],
+        ["wmctrl", "-a", "VLC media player"],
+    ):
+        try:
+            if (
+                subprocess.call(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                == 0
+            ):
+                ok = True
+        except FileNotFoundError:
+            break
+        except Exception:
+            pass
+    try:
+        wids = vlc_window_ids()
         if wids:
-            return True
+            subprocess.call(
+                ["xdotool", "windowactivate", wids[0]],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            subprocess.call(
+                ["xdotool", "key", "--window", wids[0], "f"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            ok = True
     except Exception:
         pass
-    return False
+    return ok
 
 
 def on_global_backspace_key():
-    global _last_hotkey_at
-    log_event("Backspace key detected")
+    global _last_hotkey_at, _tv_ui_mode
+    log_event("Backspace key detected (mode=%s)" % _tv_ui_mode)
     now = time.time()
     if now - _last_hotkey_at < HOTKEY_DEBOUNCE_SEC:
         log_event("Backspace ignored (debounce)")
         return
     _last_hotkey_at = now
-    if not should_handle_menu_hotkey():
-        vlc_focus = active_window_is_vlc()
-        vlc_run = vlc_window_exists()
-        log_event(
-            "Backspace ignored (VLC focused=%s, VLC running=%s)"
-            % (vlc_focus, vlc_run)
-        )
+
+    if _tv_ui_mode == "menu":
+        if vlc_window_exists():
+            _tv_ui_mode = "video"
+            ok_rest = restore_vlc()
+            set_hotkey_action("video")
+            log_event("Backspace → video (restore=%s)" % ok_rest)
+        else:
+            raise_browser_window()
+            set_hotkey_action("menu")
+            log_event("Backspace → menu (no VLC)")
         return
-    log_event("Backspace — minimize VLC, raise Pale Moon, open menu")
-    minimize_vlc()
-    raise_browser_window()
-    set_hotkey_menu_pending()
+
+    _tv_ui_mode = "menu"
+    ok_min = minimize_vlc() if vlc_window_exists() else False
+    ok_br = raise_browser_window()
+    set_hotkey_action("menu")
+    log_event(
+        "Backspace → TV menu (minimize=%s raise=%s)"
+        % (ok_min, ok_br)
+    )
 
 
 def _evdev_hotkey_loop():
@@ -452,6 +604,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             launch_vlc(url, title=title, fullscreen=fullscreen)
+            set_tv_ui_mode("video")
             log_event("VLC play: %s" % (title or url[:80]))
         except FileNotFoundError:
             self.send_response(500)
@@ -510,12 +663,42 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(msg)
             return
         if self.path.startswith("/hotkey-pending"):
-            pending = consume_hotkey_menu_pending()
+            action = consume_hotkey_action()
             self.send_response(200)
             self._cors()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            msg = json.dumps({"ok": True, "openMenu": pending}).encode("utf-8")
+            msg = json.dumps(
+                {
+                    "ok": True,
+                    "action": action,
+                    "openMenu": False,
+                }
+            ).encode("utf-8")
+            self.wfile.write(msg)
+            return
+        if self.path.startswith("/focus-video"):
+            set_tv_ui_mode("video")
+            ok = restore_vlc()
+            self.send_response(200)
+            self._cors()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            msg = json.dumps({"ok": ok, "mode": "video"}).encode("utf-8")
+            self.wfile.write(msg)
+            return
+        if self.path.startswith("/focus-menu"):
+            set_tv_ui_mode("menu")
+            ok_min = minimize_vlc() if vlc_window_exists() else False
+            ok_br = raise_browser_window()
+            set_hotkey_action("menu")
+            self.send_response(200)
+            self._cors()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            msg = json.dumps(
+                {"ok": True, "mode": "menu", "minimize": ok_min, "raise": ok_br}
+            ).encode("utf-8")
             self.wfile.write(msg)
             return
         if self.path.startswith("/health"):

@@ -65,7 +65,7 @@ class TvhadminVlcApp(object):
         ttk.Label(top, textvariable=self.status_var).pack(anchor=tk.W)
         ttk.Label(
             top,
-            text="Leave this app running. Press Backspace while watching VLC to return to TVHadmin.",
+            text="Backspace toggles: VLC video ↔ TVHadmin sidebar menu (VLC keeps playing). Enter / → in the browser to pick channels.",
             wraplength=440,
         ).pack(anchor=tk.W, pady=(4, 0))
 
@@ -74,7 +74,7 @@ class TvhadminVlcApp(object):
         )
         chk = ttk.Checkbutton(
             top,
-            text="Backspace opens menu whenever VLC is running (recommended on Pi)",
+            text="Remember: Backspace again returns to VLC fullscreen",
             variable=self.hotkey_var,
             command=self._on_hotkey_mode,
         )

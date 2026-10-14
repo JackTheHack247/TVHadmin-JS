@@ -196,7 +196,7 @@ function show_vlc_launch_hint(absUrl, mode) {
   if (mode === 'helper') {
     body =
       '<div class="tvh-vlc-hint-title">VLC started</div>' +
-      '<div class="tvh-vlc-hint-text">While watching VLC: press <b>Backspace</b> — the <b>TVHadmin VLC</b> app minimizes VLC and opens Pale Moon with the menu (each press appears in the app Activity log). Or use <b>Menu</b> / ☰ / <b>Home</b> / <b>F2</b>.</div>';
+      '<div class="tvh-vlc-hint-text"><b>Backspace</b> switches TV menu ↔ VLC (video keeps playing). In the menu: <b>Enter</b> opens a page, <b>→</b> goes to the channel list. Start the <b>TVHadmin VLC</b> app on the Pi.</div>';
   } else if (mode === 'helper-missing') {
     body =
       '<div class="tvh-vlc-hint-title">VLC helper not running</div>' +
@@ -1538,6 +1538,23 @@ async function vlc_helper_raise_ui() {
   } catch (e) {}
 }
 
+function external_tv_uses_sidebar_menu() {
+  return preview_player_mode() === 'external';
+}
+
+function enter_external_tv_menu_mode() {
+  close_menu_overlay();
+  try { if (window.focus) window.focus(); } catch (e) {}
+  focus_menu();
+  sessionStorage.setItem('external_tv_mode', 'menu');
+}
+
+function enter_external_tv_video_mode() {
+  close_menu_overlay();
+  focus_content();
+  sessionStorage.setItem('external_tv_mode', 'video');
+}
+
 function init_vlc_hotkey_poll() {
   if (window._tvh_hotkey_poll_init) return;
   if (preview_player_mode() !== 'external' || !vlc_helper_base()) return;
@@ -1546,7 +1563,9 @@ function init_vlc_hotkey_poll() {
     fetch(vlc_helper_base() + '/hotkey-pending', { method: 'GET', mode: 'cors', cache: 'no-store' })
       .then(function(response) { return response.ok ? response.json() : null; })
       .then(function(data) {
-        if (data && data.openMenu) open_menu_overlay();
+        if (!data || !data.action) return;
+        if (data.action === 'menu') enter_external_tv_menu_mode();
+        else if (data.action === 'video') enter_external_tv_video_mode();
       })
       .catch(function() {});
   }, 350);
@@ -1566,6 +1585,7 @@ function is_menu_open_key(e) {
 function is_menu_close_key(e) {
   if (!e) return false;
   if (e.key === 'Escape' || e.keyCode === 27) return true;
+  if (external_tv_uses_sidebar_menu()) return false;
   if (e.key === 'Backspace' || e.keyCode === 8) return true;
   return false;
 }
@@ -1647,7 +1667,8 @@ function on_menu_overlay_global_key(e) {
   if (is_menu_open_key(e)) {
     e.preventDefault();
     e.stopImmediatePropagation();
-    toggle_menu_overlay();
+    if (external_tv_uses_sidebar_menu()) enter_external_tv_menu_mode();
+    else toggle_menu_overlay();
     return;
   }
 
@@ -1671,7 +1692,8 @@ function init_menu_overlay() {
   if (preview_player_mode() !== 'external') fab.style.display = 'none';
   fab.addEventListener('click', function(ev) {
     ev.preventDefault();
-    toggle_menu_overlay();
+    if (external_tv_uses_sidebar_menu()) enter_external_tv_menu_mode();
+    else toggle_menu_overlay();
   });
   document.body.appendChild(fab);
 
@@ -1700,8 +1722,9 @@ async function play_in_external_vlc(uuid, name, type, forceProfile) {
   const url = await resolve_play_ticket_url(uuid, type, profileName, title);
   if (!url) return;
   store_preview_channel(uuid, name, url, 0, type);
-  if (is_menu_overlay_open()) close_menu_overlay();
+  close_menu_overlay();
   await launch_external_vlc(url, name);
+  enter_external_tv_video_mode();
 }
 
 async function preview_channel(uuid, name) {
@@ -1743,7 +1766,8 @@ function init_navigation() {
     mytop.addEventListener('click', function(ev) {
       ev.preventDefault();
       ev.stopPropagation();
-      open_menu_overlay();
+      if (external_tv_uses_sidebar_menu()) enter_external_tv_menu_mode();
+      else open_menu_overlay();
     });
   }
   const items = [
@@ -1767,11 +1791,11 @@ function init_navigation() {
     const keybinds = [
       ['↑ ↓', 'Navigate'],
       ['→', 'Enter page'],
-      ['←', 'Full menu'],
-      ['→', 'Close menu'],
-      ['Enter', 'Select / play'],
-      ['Home', 'Menu on/off'],
-      ['Esc', 'Close menu']
+      ['←', 'Sidebar menu'],
+      ['→', 'Channel list'],
+      ['Enter', 'Open / play'],
+      ['Backspace', 'Menu ↔ video'],
+      ['Home', 'Sidebar menu']
     ];
     const kbEl = document.createElement('div');
     kbEl.className = 'nav_keybinds';
@@ -2125,6 +2149,13 @@ function init_menu_keyboard() {
   document.addEventListener('keydown', function(e) {
     if (handle_menu_overlay_keydown(e)) return;
 
+    if (external_tv_uses_sidebar_menu() && (e.key === 'Backspace' || e.keyCode === 8)) {
+      if (!e.target.matches('input, textarea, select')) {
+        e.preventDefault();
+        return;
+      }
+    }
+
     const editing = content_nav && content_nav.fieldEdit;
 
     if (editing) {
@@ -2208,8 +2239,8 @@ function init_menu_keyboard() {
         return;
       }
       e.preventDefault();
-      if (preview_player_mode() === 'external' && !is_menu_overlay_open()) {
-        open_menu_overlay();
+      if (external_tv_uses_sidebar_menu()) {
+        enter_external_tv_menu_mode();
       } else {
         focus_menu();
       }
