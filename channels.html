@@ -1,0 +1,188 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Channels</title>
+<script src="include.js"></script>
+<script>
+
+  function formSubmit()	{
+	document.whatandwhen.submit();
+  }
+
+</script>
+</head> 
+<body style='display: none;'>
+  <div id="container">
+    <div id="navigation">
+      <div class="logo">
+        <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+      </div>
+      <div class="nav_bar">
+      </div>
+    </div>
+    <div id='layout'>
+      <div id='banner'>
+        <form name='whatandwhen' method='GET' action='channels.html' id='whatandwhen' hidden>
+          <table>
+            <tr>
+              <td><div id='mobmenu'>&#9776;<br /></div><h1>Channels</h1></td>
+	      <td><span class='wideonly'>Channel: </span><select name='which' size='1' id='select_channel' onchange='formSubmit()'></select></td>
+	      <td>
+                <span class='wideonly'><label>All Dates <input type='checkbox' name='all' id='all' onchange='formSubmit()'></label>&nbsp;</span>
+                <a href='channels.html' id='left' style='visibility: hidden;'><img src='images/left.png'></a>
+                <select name='when' size='1' id='select_date' onchange='formSubmit()'></select>
+                <a href='channels.html' id='right' style='visibility: hidden;'><img src='images/right.png'></a>
+	      </td>
+	    </tr>
+          </table>
+        </form>
+      </div>
+      <div id='wrapper'>
+        <div id='content'>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+  async function main() {
+    const params = new URLSearchParams(window.location.search);
+    var lcn = 0;
+    if (cookies.CSORT == "1") lcn = 1;
+    const [ links, channels ] = await Promise.all([get_links(), get_channels(lcn)]);
+    var slinks = [];
+    links.forEach(function(l) {
+      slinks[l["serieslink"]] = 1;
+    });
+
+    var channel_dropdown = document.getElementById("select_channel");
+    let opt = document.createElement("option");
+    opt.setAttribute("value", -1);
+    opt.text = "Select Channel";
+    channel_dropdown.appendChild(opt);
+    var i = 0;
+    channels.forEach(function(c) {
+      let opt = document.createElement("option");
+      opt.setAttribute("value", i);
+      if (lcn) opt.text = `${c.number} ${c.name}`;
+      else opt.text = `${c.name}`;
+      channel_dropdown.appendChild(opt);
+      i++;
+    });
+    var which = params.get("which");
+    if (which) channel_dropdown.selectedIndex = Number(which) + 1;
+
+    let d = new Date();
+    var dt = d/1000 + d.getTimezoneOffset()*60;
+    var today = dt - (dt%86400) + (cookies.EPGSTART * 3600);
+    if (params.has("when")) var when = Number(params.get("when"));
+    else var when = today;
+
+    var next = 0;
+    var date_dropdown = document.getElementById("select_date");
+    if (params.has("all")) {
+      document.getElementById("all").checked = true;
+      date_dropdown.style.visibility = "hidden";
+    }
+    else {
+      let left = document.getElementById("left");
+      let right = document.getElementById("right");
+      let prev = when - 86400;
+      if (prev >= today) {
+        left.href += `?which=${which}&when=${prev}`;
+        left.style.visibility = "visible";
+      }
+      var day = today;
+      for(i=0; i<8; i++) {
+        let d = datefmt.format(day*1000);
+        let opt = document.createElement("option");
+        opt.setAttribute("value", day);
+        opt.text = d;
+        date_dropdown.appendChild(opt);
+        day += 86400;
+      }
+      date_dropdown.selectedIndex = Math.floor((when-today)/86400);
+      next = when + 86400;
+      if (next < day) {
+        right.href += `?which=${which}&when=${next}`;
+        right.style.visibility = "visible";
+      }
+      date_dropdown.style.visibility = "visible";
+    }
+    document.getElementById("whatandwhen").hidden = false;
+    if (which) {
+      var table = document.createElement("TABLE");
+      table.className = 'list';
+      var row = table.insertRow(-1);
+      row.className = 'heading';
+      var title = row.insertCell();
+      title.setAttribute('colspan', '4');
+      if (lcn) title.innerHTML = `<span class='channel_name'>${channels[which].number} ${channels[which].name}</span>`;
+      else title.innerHTML = `<span class='channel_name'>${channels[which].name}</span>`;
+      var events = await get_epg(channels[which].name, when+1, next-1);
+      var last_date = ' ';
+      events.forEach(function(e) {
+        if (next == 0) {
+          let d = datefmt2.format(e.start*1000);
+          if (d != last_date) {
+            row = table.insertRow(-1);
+            row.className = 'newday';
+            row.innerHTML = `<td colspan='5'><span class='date_long'>${d}</span></td>`;
+            last_date = d;
+          }
+        }
+        row = table.insertRow(-1);
+        row.className = 'row_alt';
+        let start = timefmt.format(e.start*1000);
+        let stop = timefmt.format(e.stop*1000);
+        let desc = '';
+        if (e.summary) desc = e.summary;
+        else if (e.description) desc = e.description;
+        else if (e.subtitle) desc = e.subtitle;
+        let s = `<td class='col_duration'>${start} - ${stop}</td>` +
+            `<td class='col_title'>` +
+            `<div class='epg_title'>${e.title}</div>` +
+            `<div class='epg_subtitle'>${desc}</div></td>`;
+        if (e.dvrState == 'recording') {
+           if (slinks[e.serieslinkUri]) {
+             s += "<td class='col_min'></td><td class='col_min'><img src='images/rec.png' title='Series recording scheduled'></td>";
+           }
+          else {
+            s += "<td class='col_min'><img src='images/rec.png' title='Recording scheduled'></td>";
+          }
+        }
+        else if (e.dvrState == 'scheduled') {
+          if (slinks[e.serieslinkUri]) {
+            s += `<td class='col_min'></td><td class='col_min'><a href='channels.html' onclick='delete_by_series(event, "${e.title}", "${e.dvrUuid}", this)'><img src='images/rec.png' title='Remove series recording'></a></td>`;
+          }
+          else {
+            s += `<td class='col_min'><a href='channels.html' onclick='delete_by_event(event, "${e.title}", "${e.dvrUuid}", this)'><img src='images/rec.png' title='Remove scheduled recording'></a></td>`;
+          }
+        }
+        else {
+          s += `<td class='col_min'><a href='channels.html' onclick='create_by_event(event, "${e.eventId}", this)'><img src='images/rec_button1.png' title='record'></a></td>`;
+          if (e.serieslinkUri) {
+            s += `<td class='col_min'><a href='channels.html' onclick='create_by_series(event, "${e.eventId}", this)'><img src='images/rec_buttonS.png' title='record series'></a></td>`;
+          }
+          else {
+            s += "<td class='col_min'></td>";
+          }
+        }
+        row.innerHTML = s;
+      });
+      var content = document.getElementById("content");
+      content.appendChild(table);
+    }
+  }
+
+  const timefmt = new Intl.DateTimeFormat(navigator.language, {hour:"numeric",minute:"numeric"});
+  const datefmt = new Intl.DateTimeFormat(navigator.language, {weekday:"short",month:"numeric",day:"numeric"});
+  const datefmt2 = new Intl.DateTimeFormat(navigator.language, {weekday:"long",month:"numeric",day:"numeric"});
+
+  main();
+</script>
+</body>
+</html>

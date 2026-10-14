@@ -1,0 +1,199 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Recordings</title>
+<script src="include.js"></script>
+<script>
+
+  function stop_recording() {
+    if (!active_recording) return;
+    var msg = active_recording_title
+      ? 'Stop recording "' + active_recording_title + '"?'
+      : 'Stop the current recording?';
+    if (confirm(msg)) {
+      fetch(api_url('/api/dvr/entry/stop?uuid=' + active_recording), fetch_opts()).then(function(response) {
+        if (response.ok) location.reload();
+      });
+    }
+  }
+
+  async function start_recording() {
+    if (await start_pending_recording()) {
+      refresh_rec_top_bar();
+      location.reload();
+    }
+  }
+
+  async function toggle_recording() {
+    if (active_recording) stop_recording();
+    else await start_recording();
+  }
+
+  function refresh_rec_top_bar() {
+    const btn = document.getElementById('recording-action');
+    const pending = get_pending_record();
+    const show = !!active_recording || !!pending;
+    if (btn) {
+      btn.style.display = show ? '' : 'none';
+      if (active_recording) {
+        btn.textContent = 'Stop Recording';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-danger');
+        btn.title = active_recording_title
+          ? ('Stop: ' + active_recording_title)
+          : 'Stop the current recording';
+      } else {
+        btn.textContent = 'Start Recording';
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-success');
+        btn.title = pending ? ('Record: ' + (pending.title || 'show')) : '';
+      }
+    }
+    if (content_nav) {
+      content_nav.topBarFocus = show ? btn : null;
+      content_nav.hasTopBar = function() { return show; };
+    }
+  }
+
+  function delete_recording_row(row) {
+    const uuid = row.dataset.uuid;
+    const title = row.dataset.title;
+    if (!confirm('Delete "' + title + '"?')) return;
+    fetch(api_url("/api/dvr/entry/remove?uuid=" + uuid), fetch_opts()).then(response => {
+      if (response.ok) {
+        row.remove();
+        if (content_nav) {
+          content_nav.subFocus = false;
+          set_content_focus(Math.max(0, content_nav.index - 1));
+        }
+      }
+    });
+  }
+
+  var active_recording = null;
+  var active_recording_title = '';
+
+  function activate_recording(row) {
+    if (!row) {
+      toggle_recording();
+      return;
+    }
+    play_recording(row.dataset.uuid, row.dataset.title);
+  }
+
+  function init_rec_keyboard() {
+    init_content_keyboard({
+      getItems: function() {
+        return Array.from(document.querySelectorAll('#list tr.row_alt, #list tr.row_inprogress, #list tr.row_error'));
+      },
+      topBar: null,
+      topBarFocus: document.getElementById('recording-action'),
+      hasTopBar: function() { return !!active_recording || !!get_pending_record(); },
+      autoSubFocus: function(row) { return row.dataset.status === 'recording'; },
+      onActivate: activate_recording,
+      onDelete: delete_recording_row
+    });
+    refresh_rec_top_bar();
+  }
+</script>
+</head> 
+<body style='display: none;'>
+<div id="container">
+  <div id="navigation">
+    <div class="logo">
+      <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+    </div>
+    <div class="nav_bar">
+    </div>
+  </div>
+    <div id='layout'>
+     <div id='wrapper'>
+       <div id='content'>
+         <div id='rec-top-bar' class='rec-top-bar'>
+           <div class='rec-top-title'><div id='mobmenu'>&#9776;</div><h1>Recordings</h1></div>
+           <div class='rec-top-actions'>
+             <button type='button' class='btn-danger' id='recording-action' onclick='toggle_recording()' style='display:none'>Stop Recording</button>
+           </div>
+         </div>
+         <table class='list' id='list'>
+	  <tr class='heading'>
+	    <td class='col_date'><h2>Date</h2></td>
+	    <td class='col_time'><h2>Time</h2></td>
+	    <td class='col_channel'><h2>Channel</h2></td>
+	    <td class='col_length'><h2>Length</h2></td>
+	    <td class='col_name'><h2>Name</h2></td>
+	  </tr>
+         </table>
+       </div>
+     </div>
+   </div>
+  </div>
+<script>
+  async function main() {
+    const [ tags, channels, recordings ] = await Promise.all([get_channeltags(), get_channels(0), get_recordings(1)]);
+
+    var table = document.getElementById("list");
+    recordings.forEach(function(r) {
+      if (r.sched_status == "scheduled") return;
+      var time = timefmt.format(r.start*1000);
+      var date = datefmt.format(r.start*1000);
+      if (r.uri && r.uri.includes("#")) {
+        var duration = r.stop_real - r.start_real;
+      }
+      else var duration = r.stop - r.start;
+      var hh = Math.floor(duration / 3600);
+      var mm = Math.floor((duration % 3600) / 60);
+      var length = hh + ':' + ('00'+mm).slice(-2);
+      var title = htmlspecialchars(r.disp_title);
+      var summ = r.disp_extratext;
+      var row = table.insertRow(-1);
+      var ok = 1;
+      if (r.sched_status == 'completed') {
+	if (!r.errorcode && r.data_errors < 10000) {
+	  row.className = 'row_alt';
+	}
+	else {
+	  row.className = 'row_error';
+	}
+      }
+      else if (r.sched_status == 'recording') {
+	row.className = 'row_inprogress';
+	active_recording = r.uuid;
+	active_recording_title = title;
+	time = 'Ongoing';
+	length = 'Ongoing';
+      }
+      else {
+	ok = 0;
+	row.className = 'row_error';
+      }
+      row.dataset.uuid = r.uuid;
+      row.dataset.title = title;
+      row.dataset.status = r.sched_status;
+      row.dataset.playable = ok ? '1' : '0';
+      var s = `<td class='col_date'>${date}</td>` +
+	`<td class='col_time'>${time}</td>` +
+	"<td class='col_channel'><div class='channel_name'>";
+      if (cookies.ICONS && r.channel_icon) {
+        s = s + `<img src="${tvh_url(r.channel_icon)}" class="channel-icon" alt="${r.channelname}" title="${r.channelname}">`;
+      }
+      else s = s + r["channelname"];
+      s = s + `</div></td><td class='col_length'>${length}</td>` +
+	  `<td class='col_name'><div class='epg_title'>${title}</div><div class='epg_subtitle'>${summ}</div></td>` +
+	  `<td class='col_action'><span class='rec-delete-label'>Delete</span></td>`;
+      row.innerHTML = s;
+    });
+    init_rec_keyboard();
+  }
+
+  const timefmt = new Intl.DateTimeFormat(navigator.language, {hour:"numeric",minute:"numeric"});
+  const datefmt = new Intl.DateTimeFormat(navigator.language, {day:"2-digit",month:"2-digit",year:"2-digit"});
+
+  main();
+</script>
+ </body>
+</html>

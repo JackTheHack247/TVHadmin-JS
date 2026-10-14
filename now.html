@@ -1,0 +1,246 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - What's On Now?</title>
+<script src="include.js"></script>
+<script>
+
+  function updateTimeline() {
+    var now = Date.now()/1000;
+    const bars = document.querySelectorAll('.percent');
+    for (const bar of bars) {
+      const done = bar.querySelector('.elapsed');
+      var start = parseInt(done.dataset.start);
+      var stop = parseInt(done.dataset.stop);
+      var duration = stop - start;
+      var elapsed = now - start;
+      var pc = 0;
+      if (stop > start) pc = 100*elapsed/duration;
+      if (pc > 100) {
+        update(0);
+        return;
+      }
+      done.style.width = pc + '%';
+      bar.title = (Math.round(elapsed/60)) + ' min / ' + (duration/60) + ' min';
+    }
+    if (cookies.REFR) {
+      var sync = (now % 60) * 1000;
+      setTimeout(updateTimeline, 63000-sync);  // Avoid race
+    }
+  }
+
+  var channelMeasureEl = null;
+
+  function get_channel_measure_el() {
+    if (!channelMeasureEl) {
+      channelMeasureEl = document.createElement('span');
+      channelMeasureEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;pointer-events:none;';
+      document.body.appendChild(channelMeasureEl);
+    }
+    return channelMeasureEl;
+  }
+
+  function text_wider_than_cell(text, cell, refEl) {
+    if (!text || !cell) return false;
+    var style = getComputedStyle(refEl || cell);
+    var measure = get_channel_measure_el();
+    measure.style.font = style.font;
+    measure.style.fontSize = style.fontSize;
+    measure.style.fontWeight = style.fontWeight;
+    measure.style.fontFamily = style.fontFamily;
+    measure.style.letterSpacing = style.letterSpacing;
+    measure.textContent = text;
+    var padL = parseFloat(style.paddingLeft) || 0;
+    var padR = parseFloat(style.paddingRight) || 0;
+    var available = cell.clientWidth - padL - padR;
+    if (available <= 0) return false;
+    return measure.offsetWidth > available + 1;
+  }
+
+  function channel_row_wraps(row) {
+    var label = row.querySelector('.channel_label');
+    var cell = row.querySelector('.col_channel');
+    if (!cell) return false;
+    var name = label ? label.textContent : (row.dataset.name || '');
+    return text_wider_than_cell(name, cell, label || cell);
+  }
+
+  function desc_row_wraps(row, channelWraps) {
+    if (!channelWraps) return false;
+    var desc = row.querySelector('.epg_subtitle');
+    var cell = row.querySelector('.col_desc');
+    if (!desc || !cell || !desc.textContent) return false;
+    return text_wider_than_cell(desc.textContent, cell, desc);
+  }
+
+  function title_row_wraps(row) {
+    var titleEl = row.querySelector('.epg_title');
+    var cell = row.querySelector('.col_title');
+    if (!titleEl || !cell || !titleEl.textContent) return false;
+    return text_wider_than_cell(titleEl.textContent, cell, titleEl);
+  }
+
+  function sync_whatson_row_lines() {
+    requestAnimationFrame(function() {
+      document.querySelectorAll('#whatson #list tbody tr.row_alt').forEach(function(row) {
+        var channelWraps = channel_row_wraps(row);
+        var titleWraps = title_row_wraps(row);
+        row.classList.toggle('channel-wraps', channelWraps);
+        row.classList.toggle('title-wraps', titleWraps);
+        row.classList.toggle('desc-wraps', desc_row_wraps(row, channelWraps));
+      });
+    });
+  }
+
+  async function update(first) {
+    var events = await get_epg_now('');
+    var table = document.getElementById("list").getElementsByTagName('tbody')[0];
+    var i = 0;
+    for (const c of channels) {
+      if (!channel_visible(c, media)) continue;
+      if (lcn) var name = `${c.number} ${c.name}`;
+      else var name = c.name;
+      if (first) {
+        var row = table.insertRow(-1);
+        row.className = 'row_alt';
+      }
+      else var row = table.children[i];
+      var e = find_epg_now_event(events, c, name);
+      if (e) {
+	var start = timefmt.format(e.start*1000);
+	var end = timefmt.format(e.stop*1000);
+	var summ = '';
+	if (e.summary) summ = e.summary;
+	else if (e.description) summ = e.description;
+	else if (e.subtitle) summ = e.subtitle;
+	var s = `<td class='col_duration'>` +
+		    `<table class='percent'><tr>` +
+		    `<td class='elapsed' data-start='${e.start}' data-stop=${e.stop}><img src='images/spacer.gif' width=1 height=1 alt=''></td>` +
+		    `<td class='remaining'><img src='images/spacer.gif' width=1 height=1 alt=''></td></tr></table></td>` +
+		    `<td class='col_channel'><div class='channel_name'>`;
+	if (cookies.ICONS && c.icon_public_url) {
+          s += `<img src="${tvh_url(c.icon_public_url)}" class="channel-icon" alt="${name}" title="${name}">`;
+        }
+	else s += `<span class="channel_label">${name}</span>`;
+	s += `</div></td><td class='col_title'>` + whatson_epg_title_html(e.title) + `</td>`;
+	s += `<td class='col_desc'><div class='epg_subtitle'>${summ}</div></td>`;
+      }
+      else {
+        var s = `<td class='col_duration'></td><td class='col_channel'><div class='channel_name'>`;
+        if (cookies.ICONS && c.icon_public_url) {
+          s += `<img src="${tvh_url(c.icon_public_url)}" class="channel-icon" alt="${name}" title="${name}"></div></td><td class='col_title'>No EPG available</td><td class='col_desc'></td>`;
+        }
+        else s += `<span class="channel_label">${name}</span></div></td><td class='col_title'>No EPG available</td><td class='col_desc'></td>`;
+      }
+      s += `<td class='col_stream'><a href='#' onclick='play_now_row(this.closest("tr")); return false;'><img src='images/play.png' title='Play'></a></td>`;
+      row.dataset.uuid = c.uuid;
+      row.dataset.name = name;
+      if (e) {
+        row.dataset.eventId = e.eventId;
+        row.dataset.eventTitle = e.title;
+        row.dataset.eventSubtitle = summ || '';
+      }
+      row.innerHTML = s;
+      i++;
+    }
+    sync_whatson_row_lines();
+    updateTimeline()
+  }
+
+  function play_now_row(row) {
+    if (!row || !row.dataset.uuid) return;
+    if (row.dataset.eventId) {
+      store_pending_record({
+        eventId: row.dataset.eventId,
+        uuid: row.dataset.uuid,
+        channel: row.dataset.name,
+        title: row.dataset.eventTitle || '',
+        subtitle: row.dataset.eventSubtitle || ''
+      });
+    }
+    preview_channel(row.dataset.uuid, row.dataset.name);
+  }
+</script>
+</head> 
+<body style='display: none;'>
+<div id="container">
+  <div id="navigation">
+    <div class="logo">
+      <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+    </div>
+    <div class="nav_bar">
+    </div>
+  </div>
+    <div id='layout'>
+      <div id='banner'>
+        <table>
+          <tr>
+	    <td class='col_title'><div id='mobmenu'>&#9776;</div> <h1>What's On Now</h1></td>
+	    <td id='mediatags'></td>
+	  </tr>
+        </table>
+      </div>
+      <div id='wrapper'>
+        <div id='whatson'>
+	  <table class='list' id='list'>
+	    <colgroup>
+	      <col class='whatson-col-duration'>
+	      <col class='whatson-col-channel'>
+	      <col class='whatson-col-title'>
+	      <col class='whatson-col-desc'>
+	      <col class='whatson-col-stream'>
+	    </colgroup>
+	    <thead>
+	      <tr class='newday'>
+	        <td colspan='5'><span class='date_long' id='date'></span></td>
+	      </tr>
+	    </thead>
+	    <tbody>
+	    </tbody>
+	  </table>
+       </div>
+     </div>
+  </div>
+</div>
+<script>
+  var channels, lcn, media;
+
+  async function main() {
+    lcn = 0;
+    if (cookies.CSORT == "1") lcn = 1;
+    [ tags, channels ] = await Promise.all([get_channeltags(), get_channels(lcn)]);
+    media = build_media_filter('Now_', tags);
+    document.getElementById("mediatags").innerHTML = build_tag_checkboxes('Now_');
+
+    update(1);
+    init_content_keyboard({
+      getItems: function() {
+        return Array.from(document.querySelectorAll('#whatson #list tbody tr.row_alt'));
+      },
+      onActivate: function(row) {
+        if (row) play_now_row(row);
+      }
+    });
+    if (channels.length && sessionStorage.getItem('preview_active') !== '1') {
+      for (const c of channels) {
+        if (channel_visible(c, media)) {
+          preview_channel(c.uuid, lcn ? (c.number + ' ' + c.name) : c.name);
+          break;
+        }
+      }
+    }
+  }
+
+  const datestr = new Intl.DateTimeFormat(navigator.language, {weekday:"long",year:"numeric",month:"long",day:"numeric"}).format(Date.now());
+  document.getElementById("date").innerHTML = datestr;
+  const timefmt = new Intl.DateTimeFormat(navigator.language, {hour:"numeric",minute:"numeric"});
+
+  main();
+  window.addEventListener('resize', sync_whatson_row_lines);
+</script>
+ </body>
+</html>

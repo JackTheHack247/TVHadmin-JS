@@ -1,0 +1,112 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Series Links</title>
+<script src="include.js"></script>
+<script>
+
+  function delete_link(r, uuid, name) {
+    event.preventDefault();
+    if (confirm(`Delete series link "${name}"?`)) {
+      fetch(api_url("/api/idnode/delete?uuid=" + uuid), fetch_opts()).then(response => {
+        if (response.ok) {
+          var i = r.parentNode.parentNode.rowIndex;
+          document.getElementById("list").deleteRow(i);
+        }
+      });
+    }
+  }
+</script>
+</head> 
+<body style='display: none;'>
+  <div id="container">
+    <div id="navigation">
+      <div class="logo">
+        <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+      </div>
+      <div class="nav_bar">
+      </div>
+    </div>
+    <div id='layout'>
+     <div id='banner'>
+      <table>
+        <tr>
+	  <td class='col_title'><div id='mobmenu'>&#9776;</div> <h1>Series Links</h1></td>
+	</tr>
+      </table>
+     </div>
+       <div id='wrapper'>
+         <div id='content'>
+           <table class='list' id='list'>
+	     <tr class='heading'>
+	       <td class='col_value'><h2>Timers</h2></td>
+	       <td class='col_value'><h2>Recs</h2></td>
+	       <td class='col_channel'><h2>Channel</h2></td>
+	       <td class='col_name'><h2>Name</h2></td>
+	       <td class='wideonly col_channel'><h2>Next Timer</h2></td>
+	       <td class='col_delete'></td>
+	     </tr>
+           </table>
+	</div>
+     </div>
+   </div>
+ </div>
+<script>
+  async function main() {
+    const datefmt = new Intl.DateTimeFormat(navigator.language, {weekday:"short",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric"});
+    const [ recordings, channels ] = await Promise.all([get_recordings(), get_channels(0)]);
+    var cname = [];
+    channels.forEach(function(c) {
+      cname[c.uuid] = c.name;
+    });
+    var rcnt = [];
+    var tcnt = [];
+    var tnext = [];
+    recordings.forEach(function(r) {
+      if (!r.enabled) return;
+      if (r.autorec === "") return;
+      let auto = r.autorec;
+      if (r.sched_status == "scheduled") {
+	if (tcnt[auto]) tcnt[auto]++;
+	else tcnt[auto] = 1;
+	if (tnext[auto]) {
+	  tnext[auto] = Math.min(tnext[auto], r.start);
+	}
+	else tnext[auto] = r.start;
+      }
+      else if (r.sched_status == "completed" || r.sched_status == "recording") {
+	if (rcnt[auto]) rcnt[auto]++;
+	else rcnt[auto] = 1;
+      }
+    });
+    var links = await get_links();
+    var table = document.getElementById("list");
+    links.forEach(function(link) {
+      var recs = 0;
+      var timers = 0;
+      var next = '';
+      if (rcnt[link.uuid]) recs = rcnt[link.uuid];
+      if (tcnt[link.uuid]) timers = tcnt[link.uuid];
+      if (tnext[link.uuid]) next = datefmt.format(tnext[link.uuid]*1000);
+      if (link.channel.length > 0) var channel = cname[link.channel];
+      else var channel = "(any)";
+      var name = htmlspecialchars(link.name);
+      if (!link.serieslink && link.title) name += ` (Regex: /${link.title}/)`
+      var row = table.insertRow(-1);
+      row.className = "row_alt";
+      row.innerHTML = `<td class='col_value'>${timers}</td>` +
+	`<td class='col_value'>${recs}</td>` +
+	`<td class='col_channel'>${channel}</td>` +
+	`<td class='col_name'>${name}</td>` +
+	`<td class='wideonly col_channel'>${next}</td>` +
+	`<td class='col_delete'><a href='links.html' onclick='delete_link(this, "${link.uuid}", "${name}")'><img src='images/delete.png'></a></td>`;
+    });
+  }
+  main();
+</script>
+  </body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Timeline</title>
+<script src="include.js"></script>
+<script>
+
+  function play_timeline_item(ele, title, subtitle) {
+    if (!ele || !ele.uuid) return;
+    if (ele.eventID) {
+      store_pending_record({
+        eventId: ele.eventID,
+        uuid: ele.uuid,
+        channel: ele.channel,
+        title: title || '',
+        subtitle: subtitle || ''
+      });
+    }
+    preview_channel(ele.uuid, ele.channel);
+  }
+
+  var timeline_wd = 98;
+
+  function get_schedule_layout() {
+    var timeline = document.getElementById('timeline');
+    var table = document.getElementById('list');
+    if (!timeline || !table) return null;
+    var thead = table.querySelector('thead');
+    var row = table.querySelector('tbody tr');
+    if (!thead || !row || !row.cells[1]) return null;
+    return {
+      top: table.offsetTop + thead.offsetHeight,
+      left: table.offsetLeft + row.cells[0].offsetWidth,
+      width: row.cells[1].offsetWidth,
+      height: table.offsetHeight - thead.offsetHeight
+    };
+  }
+
+  function drawCursor(refresh) {
+    var time = Date.now()/1000;
+    if(time > tnext) {
+      update(0);
+    }
+    var cursor = document.getElementById('timenow');
+    var layout = get_schedule_layout();
+    if (cursor && layout && (time >= tstart) && (time < tend)) {
+      var delta = (time - tstart) / textent;
+      cursor.style.top = layout.top + 'px';
+      cursor.style.height = layout.height + 'px';
+      cursor.style.left = (layout.left + (timeline_wd / 100) * delta * layout.width) + 'px';
+      cursor.style.visibility = 'visible';
+    }
+    if(refresh == 1) {
+      var sync = (time % 60) * 1000;
+      setTimeout(drawCursor, 63000-sync, 1);  // Avoid race
+    }
+  }
+
+  async function update(first) {
+    var now = Math.floor(Date.now() / 1000);
+    var utime = now;
+    tstart = utime - utime % 1800;
+    tend = tstart + textent;
+    tnext = tend;
+    var wday = datefmt.format(utime*1000);
+    let s = `<th class="timeline-date">${wday}</th><th class="timeline-times"><div class="timeline-time-track">`;
+    var t = tstart;
+    for (i=0; i<4; i++) {
+      let time = timefmt.format(t*1000);
+      s += `<div class="timeline-time-slot"><span class="timeline-time-label">${time}</span><span class="timeline-time-tick"></span></div>`;
+      t += textent / 4;
+    }
+    s += '</div></th>';
+    document.getElementById('newday').innerHTML = s;
+    var dateCell = document.querySelector('#timeline .timeline-date');
+    if (dateCell) {
+      dateCell.style.width = '';
+      dateCell.style.maxWidth = '';
+    }
+
+    if ((last_tend != tend) || (first == 2)) {
+      events = await get_epg('', tstart, tend);
+      last_tend = tend;
+    }
+    const elements = new Map();
+    var i = 0;
+    for (const c of channels) {
+      var j = 0;
+      if (!channel_visible(c, media)) continue;
+      if (first == 1) var row = table.insertRow(-1);
+      else var row = table.children[i];
+      if (lcn) var name = `${c.number} ${c.name}`;
+      else var name = c.name;
+      var e = events.filter(m => m.channelUuid === c.uuid);
+      var wd = 98 - e.length/8;
+      s = `<td class='col_channel row_${i%2}'><div class='channel_name'>${name}</div></td><td class='col_schedule'>`;
+      if (e.length) {
+        var init = 1;
+        for (const p of e) {
+          if (p.start >= tend) break;
+          if (p.stop <= now) continue;
+	  if (init) {
+	    if (p.start > tstart) {	//Need a spacer
+	      spc = ((p.start - tstart) * wd) / textent;
+	      s += `<div class='spacer' style='width: ${spc}%;'> <img src='images/spacer.gif' width=1 height=1 alt=''></div>`;
+	    }
+	    if (p.start <= now && p.stop > now) {
+	      tnext = Math.min(tnext, p.stop);
+	      p.onNow = 1;
+	    }
+	    else p.onNow = 0;
+	    init = 0;
+	  }
+	  var duration = Math.min(tend, p.stop) - Math.max(tstart, p.start);
+	  if (duration == 0) continue;
+	  var pc = (wd * duration) / textent;
+	  if (p.summary) var desc = p.summary;
+	  else if (p.description) var desc = p.description;
+	  else if (p.subtitle) var desc = p.subtitle;
+	  else var desc = "";
+          const esctitle = htmlspecialchars(p.title);
+          const subtitle = htmlspecialchars(desc);
+          const id = `R${i}C${j}`;
+          if (p.onNow) {
+            s += `<div class='item onNow' id='${id}' style='width: ${pc}%; cursor: pointer;' title='${subtitle}'>${p.title}</div>`;
+          }
+          else {
+            if (p.dvrState) s += `<div class='item record' id='${id}' style='width: ${pc}%; cursor: pointer;' title='${subtitle}'>${p.title}</div>`;
+            else s += `<div class='item onSoon' id='${id}' style='width: ${pc}%; cursor: pointer;' title='${subtitle}'>${p.title}</div>`;
+          }
+          elements.set(id, {eventID:p.eventId, uuid:c.uuid, channel:c.name, image:p.image});
+          j++;
+        }
+        s += "</td>";
+      }
+      else {
+        s += `<a href='#' onclick='preview_channel("${c.uuid}", "${c.name.replace(/"/g, "")}"); return false;'><div class='item onNow' style='width: 98%;'>No EPG Available</div></a></td>`;
+      }
+      row.innerHTML = s;
+      row.dataset.uuid = c.uuid;
+      row.dataset.channel = name;
+      i++;
+    }
+    timeline_elements = elements;
+    if (content_nav) set_content_focus(content_nav.index);
+  }
+
+  function clickHandler(event) {
+    if (!event.target.className.includes("item")) return;
+    if (!event.target.id) return;
+    const ele = timeline_elements.get(event.target.id);
+    if (!ele) return;
+    play_timeline_item(ele, event.target.textContent, event.target.title);
+  }
+
+  const timefmt = new Intl.DateTimeFormat(navigator.language, {hour:"numeric",minute:"numeric"});
+  const datefmt = new Intl.DateTimeFormat(navigator.language, {weekday:"short",month:"short",day:"numeric"});
+
+</script>
+</head> 
+<body style='display: none;'>
+<div id="container">
+  <div id="navigation">
+    <div class="logo">
+      <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+    </div>
+    <div class="nav_bar">
+    </div>
+  </div>
+    <div id='layout'>
+      <div id='banner'>
+        <table>
+          <tr>
+	    <td class='col_title'><div id='mobmenu'>&#9776;</div> <h1>Timeline</h1></td>
+	    <td id='mediatags'></td>
+	  </tr>
+        </table>
+      </div>
+      <div id='wrapper'>
+        <div id='timeline'>
+	  <table class='list' id='list'>
+	    <colgroup>
+	      <col id='channelname'>
+	      <col id='schedules'>
+	    </colgroup>
+	    <thead>
+	      <tr class='newday' id='newday'>
+	      </tr>
+	    </thead>
+	    <tbody>
+	    </tbody>
+	  </table>
+	  <span id='timenow' style='visibility: hidden'>
+	    <img src='images/spacer.gif' width='1' height='1' alt=''>
+	  </span>
+	</div>
+      </div>
+   </div>
+  </div>
+<script>
+  var textent, tstart, tend, tnext, last_tend=0;
+  var channels, tags, events, table, media, lcn;
+  var globalResizeTimer = null;
+  var timeline_elements = new Map();
+  var cookies = get_cookies();
+
+  async function main() {
+    var tags = await get_channeltags();
+    media = build_media_filter('Tim_', tags);
+    document.getElementById("mediatags").innerHTML = build_tag_checkboxes('Tim_');
+
+    textent = 14400;
+    if (cookies.TIMESPAN) textent = cookies.TIMESPAN * 3600;
+
+    if (cookies.CSORT == 1) {
+      lcn = 1;
+      document.getElementById('timeline').classList.add('lcn-sort');
+    }
+    else {
+      lcn = 0;
+    }
+
+    channels = await get_channels(lcn);
+    table = document.getElementById("list").getElementsByTagName('tbody')[0];
+    update(1);
+
+    if (cookies.REFR) var refresh = 1;
+    else var refresh = 0;
+    window.onresize = function() {
+      if(globalResizeTimer != null) window.clearTimeout(globalResizeTimer);
+      globalResizeTimer = window.setTimeout(drawCursor, 200, refresh);
+    };
+    drawCursor(refresh);
+    if (!content_nav) {
+      document.getElementById('list').addEventListener("click", clickHandler);
+      init_content_keyboard({
+        getItems: function() {
+          return Array.from(document.querySelectorAll('#timeline #list tbody tr'));
+        },
+        onActivate: function(row) {
+          if (!row) return;
+          const onNow = row.querySelector('.item.onNow');
+          if (onNow && onNow.id && timeline_elements.has(onNow.id)) {
+            const ele = timeline_elements.get(onNow.id);
+            play_timeline_item(ele, onNow.textContent, onNow.title);
+          } else if (row.dataset.uuid) {
+            preview_channel(row.dataset.uuid, row.dataset.channel);
+          }
+        }
+      });
+    }
+  }
+
+  main();
+</script>
+ </body>
+</html>

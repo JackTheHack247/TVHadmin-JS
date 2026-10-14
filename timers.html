@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Timers</title>
+<script src="include.js"></script>
+<script>
+
+  async function get_autorecs() {
+    const recs = await fetch_json("/api/dvr/autorec/grid?limit=9999");
+    let ret = {};
+    if (!recs || !recs.entries) return ret;
+    recs.entries.forEach(function(r) {
+      ret[r.uuid] = r.serieslink;
+    });
+    return ret;
+  }
+
+  function delete_timer(r, uuid, running, name) {
+    event.preventDefault();
+    if (running) {
+      var url = `/api/dvr/entry/stop?uuid=${uuid}`;
+    }
+    else {
+      var url = `/api/dvr/entry/cancel?uuid=${uuid}`;
+    }
+    if (confirm(`Delete timer "${name}"?`)) {
+      fetch(api_url(url), fetch_opts()).then(response => {
+        if (response.ok) {
+          if (cookies.CLASHDET) location.reload();
+          else {
+            var i = r.parentNode.parentNode.rowIndex;
+            document.getElementById("list").deleteRow(i);
+          }
+        }
+      });
+    }
+    return;
+  }
+
+  function toggle(event, uuid, enabled) {
+    let mode = !enabled;
+    let data = encodeURIComponent(`[{"enabled": ${mode}, "uuid": "${uuid}"}]`);
+    fetch(api_url(`/api/idnode/save?node=${data}`), fetch_opts()).then(response => {
+      if (response.ok) {
+        if (cookies.CLASHDET) location.reload();
+      }
+    });
+    return;
+  }
+
+  async function get_ms_stop(t){
+    const epg = await get_epg(t.channelname, t.stop, t.stop + 10800);
+    var ret = t.stop;
+    epg.forEach(function(e) {
+      if (e.episodeUri == t.uri) ret = e.stop;
+    });
+    return ret;
+  }
+</script>
+</head>
+<body style='display: none;'>
+<div id="container">
+  <div id="navigation">
+    <div class="logo">
+      <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+    </div>
+    <div class="nav_bar">
+    </div>
+  </div>
+    <div id='layout'>
+     <div id='banner'>
+      <table>
+        <tr>
+	  <td class='col_title'><div id='mobmenu'>&#9776;</div> <h1>Timers</h1></td>
+	</tr>
+      </table>
+     </div>
+     <div id='wrapper'>
+       <div id='content'>
+         <table class='list' id='list'>
+	  <tr class='heading'>
+	   <td class='col_info'></td>
+	   <td class='col_channel'><h2>Channel</h2></td>
+	   <td class='col_date'><h2>Date</h2></td>
+	   <td class='wideonly col_start'><h2>Start</h2></td>
+	   <td class='wideonly col_stop'><h2>Stop</h2></td>
+	   <td class='col_name'><h2>Name</h2></td>
+	   <td class='col_channel'><h2>Mode</h2></td>
+	   <td class='col_delete'><h2>En</h2></td>
+	   <td class='col_delete'></td>
+	  </tr>
+	 </table>
+	 <div id='clash'>
+	 </div>
+       </div>
+     </div>
+   </div>
+  </div>
+<script>
+  const scriptTag = document.createElement("script");
+  if (cookies.CLASHDET == 1) scriptTag.src = "timers1.js";
+  else scriptTag.src = "timers2.js";
+  document.body.appendChild(scriptTag);
+</script>
+ </body>
+</html>

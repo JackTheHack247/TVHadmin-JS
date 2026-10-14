@@ -1,0 +1,271 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Status</title>
+<script src="include.js"></script>
+<script>
+
+  function set_table_layouts() {
+    var tableArr = document.getElementsByClassName('list');
+    var cellWidth = 0;
+    // get widest
+    for(i = 0; i < tableArr.length; i++) {
+       if(cellWidth < tableArr[i].rows[1].cells[0].clientWidth
+	 && tableArr[i].rows[1].cells.length > 1)
+           cellWidth = tableArr[i].rows[1].cells[0].clientWidth;
+    }
+    // set all columns to the widest width found
+    for(i = 0; i < tableArr.length; i++) {
+        tableArr[i].rows[1].cells[0].style.width = cellWidth+'px';
+    }
+  }
+
+  async function get_input_status() {
+    try {
+      const response = await fetch(api_url("/api/status/inputs"), fetch_opts());
+      const ret = await response.json();
+      let inputs = ret.entries;
+      inputs.sort(function(a,b) {
+        let x = a.input.toLowerCase();
+        let y = b.input.toLowerCase();
+        if (x < y) {return -1;}
+        if (x > y) {return 1;}
+        return 0;
+      });
+      return inputs;
+    }
+    catch {
+      return [];
+    }
+  }
+
+  async function get_server_info() {
+    try {
+      const response = await fetch(api_url("/api/serverinfo"), fetch_opts());
+      if (!response.ok) return {};
+      return await response.json();
+    }
+    catch {
+      return {};
+    }
+  }
+
+  function clear_input_stats(uuid) {
+    fetch(api_url(`/api/status/inputclrstats?uuid=${uuid}`), fetch_opts()).then(() => {
+      location.reload();
+    });
+  }
+
+  async function get_status_xml() {
+    try {
+      const response = await fetch(api_url("/status.xml"), fetch_opts());
+      if (!response.ok) return "";
+      return await response.text();
+    }
+    catch {
+      return "";
+    }
+  }
+
+  async function get_comet_poll() {
+    try {
+      const response = await fetch(api_url("/comet/poll"), fetch_opts());
+      if (!response.ok) return {messages: [{}]};
+      return await response.json();
+    }
+    catch {
+      return {messages: [{}]};
+    }
+  }
+
+</script>
+</head> 
+<body style='display: none;'>
+<div id="container">
+  <div id="navigation">
+    <div class="logo">
+      <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+    </div>
+    <div class="nav_bar">
+    </div>
+  </div>
+  <div id='layout'>
+    <div id='banner'>
+      <table>
+        <tr>
+	  <td class='col_title'><div id='mobmenu'>&#9776;</div> <h1>Status</h1></td>
+	</tr>
+      </table>
+    </div>
+    <div id='wrapper'>
+      <div id='content'>
+	<table class='list' id='systable'>
+	  <tr class='heading'>
+	    <td class='col_name' colspan=2><h2>System Information</h2></td>
+	  </tr>
+          <tr class='row_alt'>
+            <td class='col_channel'>Software Version</td><td class='col_name'></td>
+          </tr>
+          <tr class='row_alt'>
+            <td class='col_channel'>System Load</td><td class='col_name'></td>
+          </tr>
+          <tr class='row_alt'>
+            <td class='col_channel'>Free Disk Space</td><td class='col_name'></td>
+          </tr>
+          <tr class='row_alt'>
+            <td class='col_channel'>Recording</td><td class='col_name'></td>
+          </tr>
+          <tr class='row_alt'>
+            <td class='col_channel'>Subscriptions</td><td class='col_name'></td>
+          </tr>
+	</table>
+        <table class='list' id='devtable'>
+          <tr class='heading' id='devhead'>
+            <td class='col_name'><h2>Devices</h2></td>
+          </tr>
+          <tr id='dev2'>
+            <td></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const items = {
+	subs: 	'Subscribers',
+	weight: 'Weight',
+	bps: 	'Bandwidth',
+	ber: 	'Bit Error Rate',
+	unc: 	'Uncorrected Blocks',
+	te: 	'Transport Errors',
+	cc: 	'Continuity Errors',
+	signal: 'Signal Strength',
+	snr: 	'Signal / Noise Ratio',
+	stream: 'Stream',
+	ec_block: 'Block Error Count',
+	tc_bit: 'Total Bit Error Count',
+	tc_block: 'Total Block Error Count',
+	ec_bit: 'Bit Error Count',
+  };
+  const datefmt = new Intl.DateTimeFormat(navigator.language, {weekday:"short",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric"});
+
+  async function update(stats) {
+    var systable = document.getElementById("systable");
+    var xml = await get_status_xml();
+    if (!xml) return;
+    var parser = new DOMParser();
+    var xmlDoc = parser.parseFromString(xml,"text/xml");
+    var loadNode = xmlDoc.getElementsByTagName("systemload")[0];
+    if (!loadNode || !loadNode.childNodes.length) return;
+    var load = loadNode.childNodes[0].nodeValue;
+    load = load.replace(/(\d{2})\d*/g, '$1');
+    load = load.replace(/,/g, ', ');
+    systable.rows[2].cells[1].innerHTML = load;
+    var poll = await get_comet_poll();
+    if (!poll.messages || !poll.messages[0]) return;
+    var free = poll.messages[0].freediskspace / 1073741824;
+    var total = poll.messages[0].totaldiskspace / 1073741824;
+    if (!total) return;
+    var pc = free*100/total;
+    var text = free.toFixed(1) + " GiB (" + pc.toFixed(1) + "%)";
+    systable.rows[3].cells[1].innerHTML = text;
+    var x = xmlDoc.getElementsByTagName("next")[0];
+    if (x) {
+      let t = x.childNodes[0].nodeValue;
+      text = "Next: " + datefmt.format(Date.now() + 60000*t);
+    }
+    else {
+      x = xmlDoc.getElementsByTagName("title");
+      if (x.length) {
+        text = "Recording:";
+	for (let i=0; i<x.length; i++) {
+	   text += ` "${x[i].childNodes[0].nodeValue}"`;
+	}
+      }
+      else text = "";
+    }
+    systable.rows[4].cells[1].innerHTML = text;
+    var subsNode = xmlDoc.getElementsByTagName("subscriptions")[0];
+    if (subsNode && subsNode.childNodes.length) {
+      var subs = subsNode.childNodes[0].nodeValue;
+      systable.rows[5].cells[1].innerHTML = subs;
+    }
+    var devtable = document.getElementById("devtable");
+    if (!stats) stats = await get_input_status();
+    for (let i=0; i<stats.length; i++) {
+      switch(stats[i].signal_scale) {
+        case 1:
+          stats[i].signal = Math.round(stats[i].signal * 100 / 65535) + ' %';
+          break;
+        case 2:
+          stats[i].signal = Math.round(stats[i].signal / 1000, 1) + ' dBm';
+          break;
+        default:
+          stats[i].signal = 0;
+      }
+      switch(stats[i].snr_scale) {
+        case 1:
+          stats[i].snr = Math.round(stats[i].snr * 100 / 65535) + ' %';
+          break;
+        case 2:
+          stats[i].snr = Math.round(stats[i].snr / 1000, 1) + ' dB';
+          break;
+        default:
+          stats[i].snr = 0;
+      }
+    }
+    var i = 2;
+    for (var k in items) {
+      var j = 1;
+      for (var s of stats) {
+        let x = devtable.rows[i].cells;
+        if (k in s) x[j].innerHTML = s[k];
+        else x[j].innerHTML = '';
+        j++;
+      }
+      i++;
+    }
+  }
+
+  async function main() {
+    var cookies = get_cookies();
+    var systable = document.getElementById("systable");
+    var info = await get_server_info();
+    systable.rows[1].cells[1].innerHTML = info.sw_version || "Unavailable";
+
+    var stats = await get_input_status();
+    var devtable = document.getElementById("devtable");
+    var devhead = document.getElementById("devhead");
+    var dev2 = document.getElementById("dev2");
+    for (var s of stats) {
+        var title = devhead.insertCell();
+        title.className = 'col_name';
+        title.innerHTML = `<h2>${s.input}</h2>`;
+        var button = dev2.insertCell();
+        button.className = 'col_name';
+        button.innerHTML = `<button type='button' onclick='clear_input_stats("${s.uuid}")'>Clear Counters</button>`;
+    }
+    for (var k in items) {
+        var row = devtable.insertRow(-1);
+        row.className = 'row_alt';
+        title = row.insertCell();
+        title.classname = 'col_channel';
+        title.innerHTML = `${items[k]}`;
+        for (var s of stats) {
+            const c = row.insertCell();
+            c.classname = 'col_name';
+        }
+    }
+    update(stats);
+    if (cookies.REFS) setInterval(update, 5000, 0);
+    set_table_layouts();
+  }
+  main();
+  </script>
+ </body>
+</html>

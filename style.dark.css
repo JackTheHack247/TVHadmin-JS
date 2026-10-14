@@ -1,0 +1,54 @@
+@import url('style.css');
+
+:root {
+	--wb-sidebar: #2a2a2a;
+	--wb-sidebar-dark: #1e1e1e;
+	--wb-panel: #333333;
+	--wb-panel-light: #3a3a3a;
+	--wb-content: #2c2c2c;
+	--wb-content-dark: #1a1a1a;
+	--wb-border: #555555;
+	--wb-active: #3d6cb5;
+	--wb-now: #6a9a4a;
+	--wb-soon: #444444;
+	--wb-record: #8a5050;
+	--wb-inprogress: #4a7a3a;
+	--wb-header: #2a2a2a;
+	--wb-text: #f0f0f0;
+	--wb-text-light: #ffffff;
+	--wb-progress-bg: #444444;
+	--wb-progress-fill: #3d6cb5;
+	--wb-danger: #c04040;
+	--wb-timeline-header: #4a4060;
+}
+
+* {
+	color: var(--wb-text);
+	font-weight: normal;
+}
+
+select {
+	background-color: #1a1a1a;
+	color: #f0f0f0;
+}
+
+select option {
+	background-color: #1a1a1a !important;
+	color: #f0f0f0 !important;
+}
+
+input[type=text],
+input[type=url] {
+	background-color: #1a1a1a;
+	color: #f0f0f0;
+	border: 1px solid #555;
+}
+
+dialog {
+	background-color: #2a2a2a;
+	color: #f0f0f0;
+}
+
+dialog::backdrop {
+	background-color: rgba(0, 0, 0, 0.7);
+}

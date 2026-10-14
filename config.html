@@ -1,0 +1,303 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Config</title>
+<script src="include.js"></script>
+<script>
+  function saveForm(form) {
+    var serialized = {};
+    for (var i = 0; i < form.elements.length; i++) {
+      var field = form.elements[i];
+      if (!field.name || field.disabled || field.type === 'file' || field.type === 'reset' || field.type === 'submit' || field.type === 'button') continue;
+      if ((field.type !== 'checkbox' && field.type !== 'radio') || field.checked) {
+        serialized[field.name] = field.value;
+      }
+    }
+    return serialized;
+  }
+
+  function reloadForm(form, cookies) {
+    for (var i = 0; i < form.elements.length; i++) {
+      var field = form.elements[i];
+      if (!field.name || field.type === 'submit' || field.type === 'button') continue;
+      if (field.type === 'checkbox' && field.name in cookies) {
+        field.checked = true;
+      }
+      else if (field.type === 'select-one' && field.name in cookies && cookies[field.name] !== 'None') {
+        field.value = cookies[field.name];
+      }
+      else if (field.type === 'text' && field.name in cookies) {
+        field.value = cookies[field.name];
+      }
+    }
+  }
+
+  function reset_defaults() {
+    if (confirm('Reset all settings back to factory defaults?')) {
+      localStorage.removeItem('TVHadmin');
+      sessionStorage.clear();
+      location.reload();
+    }
+  }
+</script>
+</head> 
+<body style='display: none;'>
+<div id="container">
+  <div id="navigation">
+    <div class="logo">
+      <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+    </div>
+    <div class="nav_bar">
+    </div>
+  </div>
+  <div id="layout">
+    <div id="wrapper">
+      <div id="config">
+        <div class="config-top-bar">
+          <div class="config-top-title"><div id="mobmenu">&#9776;</div><h1>Config</h1></div>
+          <div class="config-actions">
+            <button type="button" class="btn-danger" id="config-reset" onclick="reset_defaults()">Reset</button>
+            <button type="submit" class="submit" id="config-save" form="myForm">Save</button>
+          </div>
+        </div>
+        <form action="config.html" method="post" name="FormName" id="myForm">
+          <table class="config-list">
+            <tr class="row_alt" id="tvh-url-row">
+              <td class="col_label">TVHeadend Server URL</td>
+              <td class="col_value"><input type="text" name="TVH_URL" placeholder="http://your.server:9981"></td>
+            </tr>
+            <tr class="row_alt" id="stream-prof-row">
+              <td class="col_label">Stream Profile</td>
+              <td class="col_value" id="stream-prof"></td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">Preview player</td>
+              <td class="col_value">
+                <select name="PREVIEW_PLAYER">
+                  <option value="external">External VLC app (recommended on Pi)</option>
+                  <option value="html5">HTML5 video in browser</option>
+                  <option value="vlc">VLC browser plugin (legacy NPAPI)</option>
+                  <option value="auto">Auto (plugin if detected, else HTML5)</option>
+                </select>
+              </td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">VLC Python helper</td>
+              <td class="col_value">
+                <input type="checkbox" name="VLC_HELPER" value="1" checked>
+                <span class="config-inline-hint">Run <code>scripts/start-vlc-helper.sh</code> on the Pi — Play launches VLC. <b>Backspace</b> (while VLC focused) opens the menu; each press is printed in the helper console. Needs <code>python3-evdev wmctrl xdotool</code> and user in group <code>input</code>.</span>
+              </td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">Helper port</td>
+              <td class="col_value"><input type="text" name="VLC_HELPER_PORT" size="6" placeholder="8765"></td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">VLC fullscreen</td>
+              <td class="col_value">
+                <input type="checkbox" name="VLC_FULLSCREEN" value="1" checked>
+                <span class="config-inline-hint">Uncheck if fullscreen VLC hides the browser and you cannot open the menu (VLC plays in a window instead).</span>
+              </td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">Close VLC on menu</td>
+              <td class="col_value">
+                <input type="checkbox" name="VLC_STOP_ON_MENU" value="1">
+                <span class="config-inline-hint">If checked, opening the menu stops VLC. Otherwise the helper tries to raise the browser (<code>sudo apt install wmctrl</code> on the Pi).</span>
+              </td>
+            </tr>
+            <tr class="row_alt" id="prof-row" style="display:none">
+              <td class="col_label">Recording Profile</td>
+              <td class="col_value" id="prof"></td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">Theme</td>
+              <td class="col_value">
+                <select name="THEME">
+                  <option value="0">Light</option>
+                  <option value="1">Dark</option>
+                  <option value="2">Blue</option>
+                </select>
+              </td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">Home Page</td>
+              <td class="col_value">
+                <select name="HOME">
+                  <option value="now">Whats On Now</option>
+                  <option value="timeline">TimeLine</option>
+                  <option value="recordings">Record</option>
+                  <option value="config">Config</option>
+                </select>
+              </td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">Timeline Length</td>
+              <td class="col_value">
+                <select name="TIMESPAN">
+                  <option value="2">2 hours</option>
+                  <option value="4">4 hours</option>
+                  <option value="6">6 hours</option>
+                </select>
+              </td>
+            </tr>
+            <tr class="row_alt">
+              <td class="col_label">Auto Refresh</td>
+              <td class="col_value"><input type="checkbox" name="REFR" value="1"></td>
+            </tr>
+          </table>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+async function main() {
+  let form = document.getElementById("myForm");
+  form.addEventListener("submit", function(event) {
+    save_settings(saveForm(form));
+  });
+
+  let profiles = await get_profiles();
+  if (profiles.length) {
+    var s = "<select name='UUID'>";
+    for (const p of profiles) {
+      if (!p.enabled) continue;
+      let sel = '';
+      let name = p.name || '(default)';
+      if (p.name == '' && cookies.UUID == 'None') sel = 'selected';
+      if (p.uuid === cookies.UUID) sel = 'selected';
+      s += `<option value='${p.uuid}' ${sel}>${name}</option>`;
+    }
+    s += "</select>";
+    document.getElementById("prof").innerHTML = s;
+    document.getElementById("prof-row").style.display = '';
+  }
+
+  let streamProfiles = await get_stream_profiles();
+  var sp = "<select name='SUUID'>";
+  sp += "<option value=''" + (!cookies.SUUID ? " selected" : "") + ">Auto (browser-friendly)</option>";
+  const seen = {};
+  for (const p of streamProfiles) {
+    if (!p.val || seen[p.val]) continue;
+    seen[p.val] = true;
+    let sel = cookies.SUUID === p.val ? ' selected' : '';
+    sp += `<option value='${p.val}'${sel}>${p.val}</option>`;
+  }
+  sp += "</select>";
+  document.getElementById("stream-prof").innerHTML = sp;
+  const hint = document.createElement('div');
+  hint.className = 'stream-prof-hint';
+  const available = streamProfiles.map(function(p) { return p.val; }).filter(Boolean);
+  const best = (typeof best_browser_stream_profile_hint === 'function') ? best_browser_stream_profile_hint() : 'webtv-h264-vorbis-mp4';
+  if (available.indexOf('webtv-h264-aac-mp4') === -1) {
+    hint.textContent = 'webtv-h264-aac-mp4 is not on your server. Use Auto or pick ' + best + '. To add MP4: TVHeadend → Configuration → Stream → Stream profiles → Add → Transcode/av-lib, container mp4, video h264, audio aac, name webtv-h264-aac-mp4.';
+  } else {
+    hint.textContent = 'Recommended for this browser: webtv-h264-aac-mp4 (or Auto).';
+  }
+  document.getElementById("stream-prof").appendChild(hint);
+  document.getElementById("stream-prof-row").style.display = '';
+
+  const previewHint = document.createElement('div');
+  previewHint.className = 'stream-prof-hint';
+  previewHint.textContent = 'External VLC: start scripts/start-vlc-helper.sh on the Pi, enable VLC Python helper below, Save. Play runs VLC fullscreen via Python (fallback: .m3u download). Use stream profile pass.';
+  const previewRow = document.querySelector('select[name="PREVIEW_PLAYER"]');
+  if (previewRow && previewRow.parentNode) previewRow.parentNode.appendChild(previewHint);
+
+  reloadForm(form, cookies);
+
+  if (is_tvh_embedded()) {
+    const urlRow = document.getElementById('tvh-url-row');
+    if (urlRow) {
+      urlRow.querySelector('.col_value').innerHTML =
+        'Connected via TVHeadend (same server — leave URL blank when served from /static/)';
+    }
+  }
+
+  document.querySelectorAll('#config select').forEach(function(s) { s.tabIndex = -1; });
+  init_config_keyboard();
+}
+
+var config_action_idx = 1;
+
+function highlight_config_actions() {
+  const buttons = document.querySelectorAll('#config .config-actions button');
+  buttons.forEach(function(btn, i) {
+    btn.classList.toggle('content-selected', content_nav && content_nav.index < 0 && i === config_action_idx);
+  });
+}
+
+function sync_config_keyboard_highlight() {
+  if (!content_nav) return;
+  if (content_nav.index < 0) highlight_config_actions();
+  else {
+    document.querySelectorAll('#config .config-actions button').forEach(function(btn) {
+      btn.classList.remove('content-selected');
+    });
+  }
+}
+
+function activate_config_row(row, idx) {
+  if (idx === -1) {
+    const buttons = document.querySelectorAll('#config .config-actions button');
+    if (buttons[config_action_idx]) buttons[config_action_idx].click();
+    return;
+  }
+  if (!row) return;
+  const field = row.querySelector('input, select');
+  if (!field) return;
+  if (field.type === 'checkbox') {
+    field.checked = !field.checked;
+    return;
+  }
+  if (field.tagName === 'SELECT') {
+    begin_field_edit(field);
+    return;
+  }
+  field.focus();
+}
+
+function init_config_keyboard() {
+  init_content_keyboard({
+    getItems: function() {
+      return Array.from(document.querySelectorAll('#config .config-list tr.row_alt'));
+    },
+    topBar: document.querySelector('#config .config-top-bar'),
+    hasTopBar: function() { return true; },
+    onActivate: activate_config_row,
+    onTopBarLeft: function() {
+      if (config_action_idx > 0) {
+        config_action_idx--;
+        highlight_config_actions();
+      } else {
+        focus_menu();
+      }
+    },
+    onTopBarRight: function() {
+      const buttons = document.querySelectorAll('#config .config-actions button');
+      if (config_action_idx < buttons.length - 1) {
+        config_action_idx++;
+        highlight_config_actions();
+      }
+    },
+    onFocusChange: sync_config_keyboard_highlight,
+    start: 0
+  });
+  const base_on_content_focus = on_content_focus;
+  on_content_focus = function() {
+    if (typeof base_on_content_focus === 'function') base_on_content_focus();
+    sync_config_keyboard_highlight();
+  };
+  focus_menu();
+  const active_idx = nav_items.findIndex(function(n) { return n.classList.contains('active'); });
+  if (active_idx >= 0) set_menu_selection(active_idx);
+  sync_config_keyboard_highlight();
+}
+main();
+</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html> 
+<html>
+<head>
+<meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="application-name" content="TVHadmin">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<title>TVHadmin - Search</title>
+<script src="include.js"></script>
+</head> 
+<body style='display: none;'>
+<div id="container">
+  <div id="navigation">
+    <div class="logo">
+      <img src="images/logo.png" alt="TVHeadend Logo" width="150">
+    </div>
+    <div class="nav_bar">
+    </div>
+  </div>
+    <div id='layout'>
+     <div id='banner'>
+      <table>
+        <tr>
+	  <td class='col_title'><div id='mobmenu'>&#9776;</div><div id='title'></div></td>
+	</tr>
+      </table>
+     </div>
+     <div id='wrapper'>
+       <div id='content'>
+       </div>
+     </div>
+   </div>
+  </div>
+<script>
+  async function main() {
+    const timefmt = new Intl.DateTimeFormat(navigator.language, {hour:"numeric",minute:"numeric"});
+    const datefmt = new Intl.DateTimeFormat(navigator.language, {weekday:"long",month:"numeric",day:"numeric"});
+    const params = new URLSearchParams(window.location.search);
+    var needle = params.get('find');
+    if (needle == "") return;
+    var links = await get_links();
+    var slinks = [];
+    links.forEach(function(l) {
+      slinks[l["serieslink"]] = 1;
+    });
+    var title = document.getElementById("title");
+    title.innerHTML = `<h1>Search Results for "${needle}"</h1>`;
+    var table = document.createElement("TABLE");
+    table.className = 'list';
+    var last_date = ' ';
+    var results = await search_epg("", needle);
+    for (e of results) {
+      let d = datefmt.format(e.start*1000);
+      if (d != last_date) {
+        row = table.insertRow(-1);
+        row.className = 'newday';
+        row.innerHTML = `<td colspan='5'><span class='date_long'>${d}</span></td>`;
+        last_date = d;
+      }
+      row = table.insertRow(-1);
+      row.className = 'row_alt';
+      let start = timefmt.format(e.start*1000);
+      let stop = timefmt.format(e.stop*1000);
+      let desc = '';
+      if (e.summary) desc = e.summary;
+      else if (e.description) desc = e.description;
+      else if (e.subtitle) desc = e.subtitle;
+      let s = `<td class='col_duration'><span class='time_duration'>${start} - ${stop}</span></td>` +
+	    `<td class='col_channel'><div class='channel_name'>${e.channelName}</div></td>` +
+	    `<td class='col_title'>` +
+	    `<div class='epg_title'>${e.title}</div>` +
+	    `<div class='epg_subtitle'>${desc}</div></td>`;
+      if (e.dvrState == 'scheduled' || e.dvrState == 'recording') {
+	if (slinks[e.serieslinkUri]) {
+	  s += "<td></td><td><img src='images/rec.png' title='Series recording scheduled'></td>";
+	}
+	else {
+	  s += "<td><img src='images/rec.png' title='Recording scheduled'></td>";
+	}
+      }
+      else {
+	s += `<td><a href='search.html' onclick='create_by_event(event, "${e.eventId}", this)'><img src='images/rec_button1.png' title='record'></a></td>`;
+	if (e.serieslinkUri) {
+	  s += `<td><a href='search.html' onclick='create_by_series(event, "${e.eventId}", this)'><img src='images/rec_buttonS.png' title='record series'></a></td>`;
+	}
+	else {
+	  s += "<td></td>";
+	}
+      }
+      row.innerHTML = s;
+    }
+    var content = document.getElementById("content");
+    content.appendChild(table);
+  }
+  main();
+</script>
+ </body>
+</html>
