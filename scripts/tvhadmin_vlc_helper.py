@@ -35,10 +35,10 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "7"
+VERSION = "9"
 
 STREAM_PATH = re.compile(
-    r"^/(?:play/ticket/(?:stream/|dvrfile/)|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
+    r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
     re.I,
 )
 
@@ -237,7 +237,10 @@ def focus_is_vlc():
     active = active_window_id()
     if not active:
         return False
-    return any(_same_window(active, w) for w in vlc_window_ids())
+    if any(_same_window(active, w) for w in vlc_window_ids()):
+        return True
+    cls = _out(["xprop", "-id", active, "WM_CLASS"]).lower()
+    return '"vlc"' in cls and APP_WM_CLASS not in cls
 
 
 def focus_vlc_window(wid):
@@ -356,9 +359,7 @@ def unhide_vlc():
 
 def leave_vlc_for_menu():
     """Press F in VLC so it leaves fullscreen, then bring Pale Moon to the front."""
-    fs = any_vlc_fullscreen()
-    if fs is None:
-        fs = _vlc_fullscreen
+    fs = bool(any_vlc_fullscreen()) or _vlc_fullscreen
     pressed_f = False
     if fs:
         pressed_f = vlc_press_f()
@@ -375,9 +376,7 @@ def leave_vlc_for_menu():
 def restore_vlc_video():
     """Bring VLC back in front and press F so it is fullscreen again."""
     unhide_vlc()
-    fs = any_vlc_fullscreen()
-    if fs is None:
-        fs = _vlc_fullscreen
+    fs = bool(any_vlc_fullscreen()) or _vlc_fullscreen
     if fs:
         wid = pick_vlc_window()
         return bool(wid and activate_window(wid)) or _wlr_focus("app_id:vlc")

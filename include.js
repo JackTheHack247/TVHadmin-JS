@@ -244,11 +244,8 @@ async function launch_external_vlc(streamUrl, label) {
       if (label) q += '&title=' + encodeURIComponent(String(label).slice(0, 200));
       if (cookies.VLC_FULLSCREEN === '0') q += '&fullscreen=0';
       const response = await fetch(q, { method: 'GET', mode: 'cors', cache: 'no-store' });
-      if (response.ok) {
-        show_vlc_launch_hint(abs, 'helper');
-        return;
-      }
-      log_preview_issue('external-vlc', 'helper HTTP ' + response.status, abs);
+      if (!response.ok) log_preview_issue('external-vlc', 'helper HTTP ' + response.status, abs);
+      return;
     } catch (e) {
       log_preview_issue('external-vlc', 'helper: ' + (e.message || e), helper);
     }
