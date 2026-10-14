@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "5"
+VERSION = "6"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -423,10 +423,25 @@ def _ensure_vlc_fullscreen_after_play(want_fullscreen, play_id):
 _play_counter = 0
 
 
+def _close_running_vlc():
+    """A fresh VLC window opens in front and fullscreen; a reused one can stay behind Pale Moon."""
+    if not _ok(["pgrep", "-x", "vlc"]):
+        return
+    stop_vlc()
+    deadline = time.time() + 3
+    while time.time() < deadline:
+        if not _ok(["pgrep", "-x", "vlc"]):
+            return
+        time.sleep(0.1)
+    _ok(["pkill", "-KILL", "-x", "vlc"])
+    time.sleep(0.3)
+
+
 def launch_vlc(url, title=None, fullscreen=True):
     global _play_counter
     _play_counter += 1
     set_tv_ui_mode("video")
+    _close_running_vlc()
     cmd = [
         "vlc",
         "--one-instance",

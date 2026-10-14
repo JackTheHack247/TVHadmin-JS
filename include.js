@@ -272,8 +272,6 @@ function sync_layout_for_preview_player() {
   var external = preview_player_mode() === 'external';
   if (external) document.body.classList.add('layout-no-preview');
   else document.body.classList.remove('layout-no-preview');
-  var fab = document.getElementById('tv-menu-fab');
-  if (fab) fab.style.display = external ? '' : 'none';
 }
 
 function show_tvh_error(message) {
@@ -1598,8 +1596,6 @@ function open_menu_overlay() {
   document.body.classList.add('menu-overlay-open');
   var head = document.getElementById('tv-menu-head');
   if (head) head.style.display = 'flex';
-  var fab = document.getElementById('tv-menu-fab');
-  if (fab) fab.textContent = 'Close menu';
   focus_menu();
 }
 
@@ -1608,8 +1604,6 @@ function close_menu_overlay() {
   document.body.classList.remove('menu-overlay-open');
   var head = document.getElementById('tv-menu-head');
   if (head) head.style.display = 'none';
-  var fab = document.getElementById('tv-menu-fab');
-  if (fab) fab.textContent = 'Menu';
   focus_content();
 }
 
@@ -1683,19 +1677,6 @@ function on_menu_overlay_global_key(e) {
 function init_menu_overlay() {
   if (window._tvh_menu_overlay_init) return;
   window._tvh_menu_overlay_init = true;
-
-  var fab = document.createElement('button');
-  fab.id = 'tv-menu-fab';
-  fab.type = 'button';
-  fab.textContent = 'Menu';
-  fab.title = 'Open full menu (also Home, F2, or ←). Esc closes.';
-  if (preview_player_mode() !== 'external') fab.style.display = 'none';
-  fab.addEventListener('click', function(ev) {
-    ev.preventDefault();
-    if (external_tv_uses_sidebar_menu()) enter_external_tv_menu_mode();
-    else toggle_menu_overlay();
-  });
-  document.body.appendChild(fab);
 
   var head = document.createElement('div');
   head.id = 'tv-menu-head';
@@ -1790,12 +1771,9 @@ function init_navigation() {
   if (nav && !nav.querySelector('.nav_keybinds')) {
     const keybinds = [
       ['↑ ↓', 'Navigate'],
-      ['→', 'Enter page'],
-      ['←', 'Sidebar menu'],
+      ['←', 'Sidebar'],
       ['→', 'Channel list'],
-      ['Enter', 'Open / play'],
-      ['Backspace', 'Menu ↔ video'],
-      ['Home', 'Sidebar menu']
+      ['Enter', 'Play']
     ];
     const kbEl = document.createElement('div');
     kbEl.className = 'nav_keybinds';

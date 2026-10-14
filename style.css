@@ -514,34 +514,6 @@ body.menu-overlay-open #navigation .nav_key {
 	font-size: clamp(12px, 0.95vw, 16px);
 }
 
-#tv-menu-fab {
-	position: fixed;
-	right: 1.2vw;
-	bottom: 1.5vh;
-	z-index: 2500;
-	padding: 1vh 1.4vw;
-	font-size: clamp(13px, 1vw, 18px);
-	font-weight: bold;
-	cursor: pointer;
-	background: var(--wb-active);
-	color: #fff;
-	border: 2px solid #2a5080;
-	border-radius: 6px;
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
-}
-
-#tv-menu-fab:hover {
-	background: var(--wb-active-hover);
-}
-
-body.menu-overlay-open #tv-menu-fab {
-	bottom: auto;
-	top: 1vh;
-	right: 1.2vw;
-	background: #555;
-	border-color: #888;
-}
-
 #tv-menu-head {
 	display: none;
 	position: fixed;
@@ -584,11 +556,6 @@ body.menu-overlay-open #tv-menu-fab {
 body.layout-no-preview #mobmenu {
 	display: inline-block;
 	cursor: pointer;
-}
-
-body.layout-no-preview #tvh-vlc-hint {
-	bottom: 7vh;
-	max-width: 55vw;
 }
 
 #tvh-vlc-hint {
