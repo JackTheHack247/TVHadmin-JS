@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "6"
+VERSION = "7"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -384,92 +384,87 @@ def restore_vlc_video():
     return vlc_press_f()
 
 
-def _ensure_vlc_fullscreen_after_play(want_fullscreen, play_id):
-    """After a new channel starts, put VLC in front and fullscreen (VLC may still be
-    windowed behind Pale Moon from the last Backspace)."""
-    global _vlc_fullscreen
-    deadline = time.time() + 8
-    while time.time() < deadline and not vlc_window_ids():
+def _focus_vlc_after_play(play_id):
+    """A fresh VLC starts fullscreen by itself; only make sure it ends up in front.
+    Never press F here — that would take it out of fullscreen."""
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if play_id != _play_counter or _tv_ui_mode != "video":
+            return
+        if vlc_window_ids():
+            break
         time.sleep(0.3)
-    time.sleep(1.5)
+    else:
+        log_event("New channel: VLC window did not appear")
+        return
+    time.sleep(1.0)
     for attempt in range(4):
         if play_id != _play_counter or _tv_ui_mode != "video":
             return
-        unhide_vlc()
         wid = pick_vlc_window()
-        if not wid:
-            time.sleep(1.0)
-            continue
-        focused = focus_vlc_window(wid)
-        fs = any_vlc_fullscreen()
-        if fs is not None:
-            _vlc_fullscreen = fs
-        if focused and want_fullscreen and fs is False:
-            vlc_press_f()
-            time.sleep(0.6)
-            fs = any_vlc_fullscreen()
-        if focused and (not want_fullscreen or fs is not False):
-            log_event("New channel: VLC in front (fullscreen=%s)" % fs)
+        if wid and (focus_is_vlc() or focus_vlc_window(wid)):
+            log_event("New channel: VLC in front (fullscreen=%s)" % any_vlc_fullscreen())
             return
-        log_event(
-            "New channel: retrying (VLC focused=%s, fullscreen=%s)" % (focused, fs)
-        )
         time.sleep(1.0)
-    log_event("New channel: could not bring VLC to the front — press Backspace")
+    log_event("New channel: VLC is playing but could not be brought to the front")
 
 
 # ---------------------------------------------------------------- VLC process
 
 _play_counter = 0
-
-
-def _close_running_vlc():
-    """A fresh VLC window opens in front and fullscreen; a reused one can stay behind Pale Moon."""
-    if not _ok(["pgrep", "-x", "vlc"]):
-        return
-    stop_vlc()
-    deadline = time.time() + 3
-    while time.time() < deadline:
-        if not _ok(["pgrep", "-x", "vlc"]):
-            return
-        time.sleep(0.1)
-    _ok(["pkill", "-KILL", "-x", "vlc"])
-    time.sleep(0.3)
-
-
-def launch_vlc(url, title=None, fullscreen=True):
-    global _play_counter
-    _play_counter += 1
-    set_tv_ui_mode("video")
-    _close_running_vlc()
-    cmd = [
-        "vlc",
-        "--one-instance",
-        "--one-instance-when-started",
-        "--no-playlist-enqueue",
-    ]
-    if fullscreen:
-        cmd.append("--fullscreen")
-    if title:
-        safe = re.sub(r"[\r\n\x00]", " ", title).strip()[:200]
-        if safe:
-            cmd.append("--meta-title=" + safe)
-    cmd.append(url)
-    subprocess.Popen(
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
-    threading.Thread(
-        target=_ensure_vlc_fullscreen_after_play,
-        args=(fullscreen, _play_counter),
-        daemon=True,
-    ).start()
+_vlc_proc = None
+_launch_lock = threading.Lock()
 
 
 def stop_vlc():
-    _ok(["pkill", "-TERM", "-x", "vlc"])
+    """Close VLC completely and wait until it has gone."""
+    global _vlc_proc
+    proc, _vlc_proc = _vlc_proc, None
+    if proc and proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                pass
+    if _ok(["pgrep", "-x", "vlc"]):
+        _ok(["pkill", "-TERM", "-x", "vlc"])
+        deadline = time.time() + 3
+        while time.time() < deadline and _ok(["pgrep", "-x", "vlc"]):
+            time.sleep(0.1)
+        if _ok(["pgrep", "-x", "vlc"]):
+            _ok(["pkill", "-KILL", "-x", "vlc"])
+            time.sleep(0.3)
+
+
+def launch_vlc(url, title=None, fullscreen=True):
+    """Start a brand-new VLC for every channel (no --one-instance), so it always
+    opens in front and fullscreen."""
+    global _play_counter, _vlc_proc, _vlc_fullscreen
+    with _launch_lock:
+        _play_counter += 1
+        play_id = _play_counter
+        set_tv_ui_mode("video")
+        stop_vlc()
+        cmd = ["vlc", "--no-one-instance", "--no-playlist-enqueue", "--no-qt-privacy-ask"]
+        if fullscreen:
+            cmd.append("--fullscreen")
+        if title:
+            safe = re.sub(r"[\r\n\x00]", " ", title).strip()[:200]
+            if safe:
+                cmd.append("--meta-title=" + safe)
+        cmd.append(url)
+        _vlc_proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        _vlc_fullscreen = fullscreen
+    threading.Thread(target=_focus_vlc_after_play, args=(play_id,), daemon=True).start()
 
 
 # ---------------------------------------------------------------- Backspace toggle
