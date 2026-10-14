@@ -45,8 +45,8 @@ class TvhadminVlcApp(object):
         self.helper = helper
         self.port = port
         self.helper_thread = None
-        self.root = tk.Tk()
-        self.root.title("TVHadmin VLC")
+        self.root = tk.Tk(className=helper.APP_WM_CLASS)
+        self.root.title("TVHadmin Remote")
         self.root.minsize(420, 320)
         self.root.geometry("480x360")
         self._build_ui()
@@ -65,20 +65,9 @@ class TvhadminVlcApp(object):
         ttk.Label(top, textvariable=self.status_var).pack(anchor=tk.W)
         ttk.Label(
             top,
-            text="Backspace toggles: VLC video ↔ TVHadmin sidebar menu (VLC keeps playing). Enter / → in the browser to pick channels.",
+            text="Backspace: sends F to VLC (leave fullscreen), opens Pale Moon, then sidebar menu. Backspace again returns to VLC.",
             wraplength=440,
         ).pack(anchor=tk.W, pady=(4, 0))
-
-        self.hotkey_var = tk.BooleanVar(
-            value=os.environ.get("TVHADMIN_HOTKEY_WHEN_VLC_RUNNING", "1") == "1"
-        )
-        chk = ttk.Checkbutton(
-            top,
-            text="Remember: Backspace again returns to VLC fullscreen",
-            variable=self.hotkey_var,
-            command=self._on_hotkey_mode,
-        )
-        chk.pack(anchor=tk.W, pady=(6, 0))
 
         log_frame = ttk.LabelFrame(self.root, text="Activity", padding=6)
         log_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
@@ -93,19 +82,6 @@ class TvhadminVlcApp(object):
             side=tk.LEFT
         )
         ttk.Button(btns, text="Quit", command=self._on_close).pack(side=tk.RIGHT)
-
-    def _on_hotkey_mode(self):
-        os.environ["TVHADMIN_HOTKEY_WHEN_VLC_RUNNING"] = (
-            "1" if self.hotkey_var.get() else "0"
-        )
-        self.helper.log_event(
-            "Hotkey mode: %s"
-            % (
-                "Backspace when VLC running"
-                if self.hotkey_var.get()
-                else "Backspace only when VLC focused"
-            )
-        )
 
     def _thread_safe_log(self, line):
         if threading.current_thread() is threading.main_thread():
@@ -131,7 +107,7 @@ class TvhadminVlcApp(object):
                 self.root.after(
                     0,
                     lambda: messagebox.showerror(
-                        "TVHadmin VLC",
+                        "TVHadmin Remote",
                         "Port %s is already in use.\n"
                         "Close the other helper or run start-vlc-helper.sh --restart"
                         % self.port,
@@ -155,7 +131,7 @@ class TvhadminVlcApp(object):
         self.root.after(800, self._poll_status)
 
     def _on_close(self):
-        if messagebox.askokcancel("TVHadmin VLC", "Stop the helper and quit?"):
+        if messagebox.askokcancel("TVHadmin Remote", "Stop the helper and quit?"):
             self.helper.stop_helper()
             self.root.destroy()
 
