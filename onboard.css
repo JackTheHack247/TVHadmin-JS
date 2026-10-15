@@ -17,11 +17,11 @@ html.screen-onboard {
 	--wb-logo-rotate: 0deg;
 	--wb-logo-scale: 1;
 	--wb-nav-gap: 0px;
-	--wb-whatson-duration-width: 18px;
-	--wb-whatson-channel-width: 64px;
-	--wb-whatson-title-width: auto;
-	--wb-whatson-desc-width: 0px;
-	--wb-whatson-play-width: 22px;
+	--wb-whatson-duration-width: 36px;
+	--wb-whatson-channel-width: 52px;
+	--wb-whatson-title-width: 52px;
+	--wb-whatson-desc-width: auto;
+	--wb-whatson-play-width: 18px;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
 	--wb-rec-date-width: 76px;
@@ -267,37 +267,51 @@ html.screen-onboard #whatson .list tbody tr td {
 
 html.screen-onboard #whatson .col_channel,
 html.screen-onboard #whatson .col_title,
+html.screen-onboard #whatson .col_desc,
 html.screen-onboard #whatson .col_stream {
-	padding: 4px !important;
-	white-space: nowrap;
+	padding: 2px 3px !important;
 	overflow: hidden;
-	text-overflow: clip;
+	vertical-align: middle;
 }
 
-html.screen-onboard #whatson .col_duration {
-	padding: 2px !important;
+html.screen-onboard #whatson .list tbody tr td.col_duration {
+	position: relative;
+	padding: 0 !important;
+	height: 36px;
 }
 
 html.screen-onboard #whatson table.percent {
-	min-height: 16px;
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: calc(100% - 4px);
+	height: calc(100% - 4px);
+	min-height: 0;
+	box-sizing: border-box;
 }
 
+/* Channel and title: wrap onto a second line when too long */
 html.screen-onboard #whatson .channel_label,
-html.screen-onboard #whatson .col_title .epg_title {
-	display: block;
-	max-height: 16px !important;
-	white-space: nowrap !important;
+html.screen-onboard #whatson .col_title .epg_title,
+html.screen-onboard #whatson tr.title-wraps .col_title .epg_title {
+	display: block !important;
+	white-space: normal !important;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 	overflow: hidden;
+	max-height: 32px !important;
 	-webkit-line-clamp: unset;
 }
 
-html.screen-onboard #whatson .list tbody tr td.col_desc {
-	padding: 0 !important;
-	border-width: 0 !important;
-}
-
-html.screen-onboard #whatson .col_desc * {
-	display: none;
+/* Description: wraps and fills up to three lines */
+html.screen-onboard #whatson .col_desc .epg_subtitle,
+html.screen-onboard #whatson tr.desc-wraps .col_desc .epg_subtitle {
+	display: block !important;
+	white-space: normal !important;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+	overflow: hidden;
+	max-height: 48px !important;
 }
 
 html.screen-onboard .col_stream img {
