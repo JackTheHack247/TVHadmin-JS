@@ -2,7 +2,8 @@ const COOKIE_DEFAULTS = {
   "selected_channels": [],
   "SORT": "1", "CSORT": "0", "TIMESPAN": "2", "EPGSTART": "0", "THEME": "0", "UUID": "None",
   "SUUID": "", "CLASHDET": "0", "TVH_URL": "", "REFR": "", "HOME": "now", "PREVIEW_PLAYER": "external",
-  "VLC_HELPER": "1", "VLC_HELPER_PORT": "8765", "VLC_FULLSCREEN": "1", "VLC_STOP_ON_MENU": "0"
+  "VLC_HELPER": "1", "VLC_HELPER_PORT": "8765", "VLC_FULLSCREEN": "1", "VLC_STOP_ON_MENU": "0",
+  "SCREEN": "ext"
 };
 
 var WHATSON_TITLE_MAX_CHARS = 20;
@@ -64,6 +65,15 @@ if (cookies.THEME == 1) link.href = 'style.dark.css';
 else if (cookies.THEME == 2) link.href = 'style.blue.css';
 else link.href = 'style.css';
 document.head.appendChild(link);
+if (cookies.SCREEN === 'onboard') {
+  document.documentElement.classList.add('screen-onboard');
+  var onboardLink = document.createElement('link');
+  onboardLink.rel = 'stylesheet';
+  onboardLink.type = 'text/css';
+  onboardLink.href = 'onboard.css';
+  document.head.appendChild(onboardLink);
+  WHATSON_TITLE_MAX_CHARS = 18;
+}
 
 function get_api_base() {
   if (location.protocol === 'file:') {
@@ -2077,8 +2087,10 @@ function set_menu_selection(idx) {
   menu_index = idx;
   nav_items.forEach(function(n) { n.classList.remove('kb-selected'); });
   nav_items[idx].classList.add('kb-selected');
-  const nav = document.getElementById('navigation');
+  let nav = document.getElementById('navigation');
   const item = nav_items[idx];
+  const bar = item && item.closest('.nav_bar');
+  if (bar && bar.scrollHeight > bar.clientHeight) nav = bar;
   if (nav && item) {
     const navRect = nav.getBoundingClientRect();
     const itemRect = item.getBoundingClientRect();

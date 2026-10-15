@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "9"
+VERSION = "10"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -328,9 +328,31 @@ def vlc_press_f():
     return ok
 
 
+def make_browser_fullscreen(wid):
+    """Press F11 in Pale Moon, but only when it is not fullscreen already (F11 toggles)."""
+    if os.environ.get("TVHADMIN_BROWSER_F11", "1") in ("0", "false", "no"):
+        return False
+    fs = window_is_fullscreen(wid)
+    if fs is None or fs:
+        return bool(fs)
+    for _ in range(10):
+        active = active_window_id()
+        if active and _same_window(active, wid):
+            break
+        time.sleep(0.1)
+    else:
+        log_event("Did not press F11: Pale Moon did not take focus")
+        return False
+    if press_key_in_focused_window("F11"):
+        log_event("Pressed F11 in Pale Moon (browser fullscreen)")
+        return True
+    return False
+
+
 def raise_browser_window():
     wid = find_browser_window()
     if wid and activate_window(wid):
+        make_browser_fullscreen(wid)
         return True
     return _wlr_focus("app_id:palemoon", "app_id:Pale moon", "title:Pale Moon")
 

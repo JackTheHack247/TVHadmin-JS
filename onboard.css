@@ -1,0 +1,335 @@
+/* Onboard screen (320x240). Loaded after the theme when Config > Screen = Onboard.
+   Fixed pixel sizes keep text sharp; the sidebar becomes a full-screen menu. */
+
+html.screen-onboard {
+	--wb-whatson-duration-width: 9%;
+	--wb-whatson-channel-width: 30%;
+	--wb-whatson-title-width: 50%;
+	--wb-whatson-desc-width: 0%;
+	--wb-whatson-play-width: 11%;
+	--wb-timeline-channel-width: 28%;
+	--wb-timeline-channel-width-lcn: 32%;
+	--wb-rec-date-width: 20%;
+	--wb-rec-time-width: 0%;
+	--wb-rec-channel-width: 24%;
+	--wb-rec-length-width: 0%;
+	--wb-rec-name-width: 42%;
+	--wb-rec-action-width: 14%;
+}
+
+html.screen-onboard * {
+	font-family: "DejaVu Sans", "Bitstream Vera Sans", Verdana, Arial, sans-serif;
+	font-size: 12px;
+	line-height: 1.25;
+	text-shadow: none;
+}
+
+html.screen-onboard,
+html.screen-onboard body {
+	overflow: hidden !important;
+}
+
+html.screen-onboard #container {
+	height: 100vh !important;
+	min-height: 0 !important;
+}
+
+html.screen-onboard #layout {
+	margin-top: 0 !important;
+	height: 100vh !important;
+	flex-direction: row !important;
+}
+
+html.screen-onboard #video-panel,
+html.screen-onboard .wideonly,
+html.screen-onboard #mediatags,
+html.screen-onboard #recmediatags {
+	display: none !important;
+}
+
+/* ---- Sidebar: hidden while browsing, full screen when it has focus (← / ☰ / Backspace) */
+
+html.screen-onboard #navigation {
+	display: none !important;
+}
+
+html.screen-onboard #navigation.menu-focus {
+	display: flex !important;
+	position: fixed !important;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100vw !important;
+	max-width: none !important;
+	height: 100vh !important;
+	max-height: none !important;
+	flex-direction: column !important;
+	z-index: 1000;
+	border: none;
+	overflow: hidden !important;
+}
+
+html.screen-onboard #navigation .logo,
+html.screen-onboard #navigation .search {
+	display: none !important;
+}
+
+html.screen-onboard #navigation .nav_bar {
+	display: block !important;
+	flex: 1 1 auto;
+	margin: 0;
+	overflow-x: hidden !important;
+	overflow-y: auto;
+	scrollbar-width: none;
+}
+
+html.screen-onboard #navigation .nav_bar::-webkit-scrollbar {
+	display: none;
+}
+
+html.screen-onboard #navigation .navi {
+	border-right: none !important;
+	border-bottom: 2px solid var(--wb-border);
+}
+
+html.screen-onboard #navigation .navi a {
+	min-height: 0 !important;
+	padding: 8px 12px !important;
+}
+
+html.screen-onboard #navigation .navi a,
+html.screen-onboard #navigation .navi a span {
+	font-size: 15px !important;
+}
+
+html.screen-onboard #navigation .navi .nav-icon {
+	font-size: 15px;
+	margin-left: 6px;
+}
+
+html.screen-onboard #navigation .nav_keybinds {
+	display: flex !important;
+	flex-wrap: wrap;
+	padding: 4px 8px;
+	margin-top: 0;
+}
+
+html.screen-onboard #navigation .nav_keybinds-title {
+	display: none;
+}
+
+html.screen-onboard #navigation .nav_keybind {
+	display: inline-block;
+	width: 50%;
+	margin: 0 0 2px 0;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+html.screen-onboard #navigation .nav_keybind-label {
+	margin-left: 4px;
+}
+
+html.screen-onboard #navigation .nav_key {
+	min-width: 0;
+	padding: 1px 4px;
+	border-radius: 2px;
+}
+
+html.screen-onboard #navigation .nav_key,
+html.screen-onboard #navigation .nav_keybind-label {
+	font-size: 11px;
+}
+
+html.screen-onboard #mobmenu {
+	display: inline-block !important;
+	font-size: 16px;
+	margin-right: 6px;
+	cursor: pointer;
+}
+
+/* ---- Page title bars */
+
+html.screen-onboard #banner td,
+html.screen-onboard #content .rec-top-bar,
+html.screen-onboard #config .config-top-bar {
+	padding: 3px 6px;
+}
+
+html.screen-onboard #banner h1,
+html.screen-onboard #content .rec-top-bar h1,
+html.screen-onboard #config .config-top-bar h1 {
+	font-size: 14px;
+}
+
+html.screen-onboard .newday th,
+html.screen-onboard .newday td,
+html.screen-onboard .heading td {
+	padding: 3px 6px;
+}
+
+html.screen-onboard .newday th,
+html.screen-onboard .newday th *,
+html.screen-onboard h2 {
+	font-size: 12px;
+}
+
+/* ---- Lists */
+
+html.screen-onboard .list td,
+html.screen-onboard .group td {
+	padding: 3px 4px;
+}
+
+html.screen-onboard .channel-icon,
+html.screen-onboard #whatson .col_channel img,
+html.screen-onboard #content .col_channel img {
+	max-height: 20px;
+}
+
+html.screen-onboard .epg_subtitle {
+	font-weight: normal;
+}
+
+/* What's On: progress bar, channel, title, play (description hidden) */
+html.screen-onboard #whatson tbody tr {
+	min-height: 28px;
+}
+
+html.screen-onboard #whatson .col_channel,
+html.screen-onboard #whatson .col_title,
+html.screen-onboard #whatson .col_stream {
+	padding: 3px 4px;
+}
+
+html.screen-onboard #whatson .col_duration {
+	padding: 3px !important;
+}
+
+html.screen-onboard #whatson table.percent {
+	min-height: 18px;
+}
+
+html.screen-onboard #whatson .col_title .epg_title {
+	font-size: 13px;
+	max-height: none;
+}
+
+html.screen-onboard #whatson .list tbody tr td.col_desc {
+	padding: 0 !important;
+	border-width: 0 !important;
+}
+
+html.screen-onboard #whatson .col_desc * {
+	display: none;
+}
+
+html.screen-onboard #whatson .col_stream img,
+html.screen-onboard .col_stream img {
+	width: 18px;
+	height: 18px;
+}
+
+/* Timeline */
+html.screen-onboard #timeline .item {
+	padding: 2px 4px;
+	min-height: 20px;
+}
+
+html.screen-onboard #timeline .timeline-time-track {
+	min-height: 18px;
+}
+
+html.screen-onboard #timeline .timeline-time-slot {
+	padding: 2px 0 0 3px;
+}
+
+html.screen-onboard #timeline .timeline-time-label,
+html.screen-onboard #timeline .item,
+html.screen-onboard #timeline .item * {
+	font-size: 11px;
+}
+
+/* Recordings: date, channel, name, delete (time, length, summary hidden) */
+html.screen-onboard #content #list .col_time,
+html.screen-onboard #content #list .col_length,
+html.screen-onboard #content #list .col_name .epg_subtitle {
+	display: none;
+}
+
+html.screen-onboard #content .rec-delete-label {
+	font-size: 11px;
+}
+
+/* ---- Config: label above value, hints hidden */
+
+html.screen-onboard #config .config-list,
+html.screen-onboard #config .config-list tbody,
+html.screen-onboard #config .config-list tr {
+	display: block;
+	width: 100%;
+}
+
+html.screen-onboard #config .config-list td {
+	display: block;
+	width: 100% !important;
+	text-align: left;
+	border-bottom: none !important;
+}
+
+html.screen-onboard #config .config-list .col_label {
+	padding: 4px 6px 0;
+	font-size: 12px;
+}
+
+html.screen-onboard #config .config-list .col_value {
+	padding: 2px 6px 5px;
+}
+
+html.screen-onboard #config .config-list tr.row_alt {
+	border-bottom: 2px solid var(--wb-border);
+}
+
+html.screen-onboard #config input[type=text],
+html.screen-onboard #config select {
+	padding: 3px 4px;
+	font-size: 12px;
+}
+
+html.screen-onboard #config select.kb-field-edit {
+	max-height: 140px;
+	font-size: 12px;
+}
+
+html.screen-onboard #config .config-inline-hint,
+html.screen-onboard #config .stream-prof-hint {
+	display: none;
+}
+
+html.screen-onboard #config input[type=checkbox] {
+	width: 16px;
+	height: 16px;
+}
+
+html.screen-onboard .submit,
+html.screen-onboard .btn-action,
+html.screen-onboard .btn-danger,
+html.screen-onboard .btn-success {
+	padding: 3px 8px;
+	font-size: 12px;
+}
+
+/* ---- Pop-ups */
+
+html.screen-onboard #tvh-error-banner,
+html.screen-onboard #tvh-codec-banner,
+html.screen-onboard #tvh-vlc-hint {
+	max-width: 96vw;
+	padding: 4px 6px;
+}
+
+html.screen-onboard dialog {
+	width: 94vw;
+	max-width: 94vw;
+}

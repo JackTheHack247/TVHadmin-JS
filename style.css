@@ -674,7 +674,7 @@ body.layout-no-preview #mobmenu {
 	display: flex;
 	flex: 1;
 	min-height: 0;
-	overflow: auto;
+	overflow: hidden;
 	background: var(--wb-content);
 	padding: 0;
 }
@@ -684,10 +684,12 @@ body.layout-no-preview #mobmenu {
 #timeline,
 #config {
 	width: 100%;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 #config {
-	overflow: auto;
 	padding: 0;
 	font-size: clamp(13px, 1vw, 16px);
 }
@@ -1086,7 +1088,6 @@ a:hover {
 
 /* Timeline */
 #timeline {
-	overflow: auto;
 	padding: 0;
 	position: relative;
 }
