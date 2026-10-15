@@ -12,19 +12,24 @@
    (12px = 2x2 screen pixels per font pixel, 18px = 3x3) or the text goes blurry. */
 
 html.screen-onboard {
-	--wb-whatson-duration-width: 22px;
-	--wb-whatson-channel-width: 98px;
+	--wb-sidebar-width: 104px;
+	--wb-logo-height: 30px;
+	--wb-logo-rotate: 0deg;
+	--wb-logo-scale: 1;
+	--wb-nav-gap: 0px;
+	--wb-whatson-duration-width: 18px;
+	--wb-whatson-channel-width: 64px;
 	--wb-whatson-title-width: auto;
 	--wb-whatson-desc-width: 0px;
-	--wb-whatson-play-width: 26px;
-	--wb-timeline-channel-width: 86px;
-	--wb-timeline-channel-width-lcn: 100px;
-	--wb-rec-date-width: 62px;
+	--wb-whatson-play-width: 22px;
+	--wb-timeline-channel-width: 64px;
+	--wb-timeline-channel-width-lcn: 72px;
+	--wb-rec-date-width: 76px;
 	--wb-rec-time-width: 0px;
-	--wb-rec-channel-width: 74px;
+	--wb-rec-channel-width: 0px;
 	--wb-rec-length-width: 0px;
 	--wb-rec-name-width: auto;
-	--wb-rec-action-width: 50px;
+	--wb-rec-action-width: 52px;
 }
 
 html.screen-onboard *,
@@ -52,8 +57,24 @@ html.screen-onboard,
 html.screen-onboard body {
 	overflow: hidden !important;
 	width: 100vw;
+	max-width: 100vw;
 	height: 100vh;
 	margin: 0;
+}
+
+html.screen-onboard #wrapper,
+html.screen-onboard #content,
+html.screen-onboard #whatson,
+html.screen-onboard #timeline,
+html.screen-onboard #config,
+html.screen-onboard #main-panel {
+	min-width: 0 !important;
+	max-width: 100%;
+	overflow-x: hidden !important;
+}
+
+html.screen-onboard table {
+	max-width: 100%;
 }
 
 html.screen-onboard #container {
@@ -76,30 +97,36 @@ html.screen-onboard #tvh-vlc-hint {
 	display: none !important;
 }
 
-/* ---- Sidebar: hidden while browsing, full screen while it has focus */
+/* ---- Sidebar: same as the TV layout, just narrower (undo style.css small-screen rules) */
 
 html.screen-onboard #navigation {
-	display: none !important;
-}
-
-html.screen-onboard #navigation.menu-focus {
-	display: flex !important;
-	position: fixed !important;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	width: 100vw !important;
-	max-width: none !important;
+	position: static !important;
+	width: var(--wb-sidebar-width) !important;
+	max-width: var(--wb-sidebar-width) !important;
 	height: 100vh !important;
 	max-height: none !important;
 	flex-direction: column !important;
-	z-index: 1000;
-	border: none;
+	flex-shrink: 0;
 	overflow: hidden !important;
 }
 
-html.screen-onboard #navigation .logo,
+html.screen-onboard #navigation .logo {
+	flex: 0 0 var(--wb-logo-height) !important;
+	height: var(--wb-logo-height) !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	padding: 2px !important;
+	border: 2px solid var(--wb-border) !important;
+	border-top: none !important;
+}
+
+html.screen-onboard #navigation .logo::before {
+	top: 2px;
+	right: 2px;
+	bottom: 2px;
+	left: 2px;
+}
+
 html.screen-onboard #navigation .search,
 html.screen-onboard #navigation .nav-icon,
 html.screen-onboard #navigation .tl-bar {
@@ -108,41 +135,34 @@ html.screen-onboard #navigation .tl-bar {
 
 html.screen-onboard #navigation .nav_bar {
 	display: block !important;
-	flex: 1 1 auto;
-	margin: 0;
+	flex: 1 1 auto !important;
+	min-height: 0;
+	margin-top: 0;
 	overflow-x: hidden !important;
-	overflow-y: auto;
-	scrollbar-width: none;
-}
-
-html.screen-onboard #navigation .nav_bar::-webkit-scrollbar {
-	display: none;
+	overflow-y: auto !important;
 }
 
 html.screen-onboard #navigation .navi {
 	border-right: none !important;
-	border-bottom: 2px solid var(--wb-border);
+	border-bottom: 2px solid var(--wb-border) !important;
+	flex-shrink: 1;
 }
 
 html.screen-onboard #navigation .navi a {
-	display: block !important;
 	min-height: 0 !important;
-	height: 32px;
-	padding: 4px 10px !important;
-	box-sizing: border-box;
-}
-
-html.screen-onboard #navigation .navi a,
-html.screen-onboard #navigation .navi a * {
-	font-size: 18px !important;
-	line-height: 24px !important;
+	padding: 4px !important;
+	white-space: normal;
 }
 
 html.screen-onboard #navigation .nav_keybinds {
-	display: flex !important;
-	flex-wrap: wrap;
-	padding: 4px 6px;
-	margin-top: 0;
+	display: block !important;
+	flex-shrink: 0;
+	padding: 2px 4px !important;
+}
+
+html.screen-onboard #navigation .nav_keybind-label {
+	white-space: normal;
+	min-width: 0;
 }
 
 html.screen-onboard #navigation .nav_keybinds-title {
@@ -150,25 +170,19 @@ html.screen-onboard #navigation .nav_keybinds-title {
 }
 
 html.screen-onboard #navigation .nav_keybind {
-	display: block;
-	width: 50%;
+	display: flex !important;
 	margin: 0 0 2px 0;
-	white-space: nowrap;
-	overflow: hidden;
 }
 
 html.screen-onboard #navigation .nav_key {
-	display: inline-block;
-	min-width: 0;
-	padding: 0 4px;
+	min-width: 0 !important;
+	padding: 0 2px !important;
 	margin-right: 4px;
-	border-radius: 0;
+	border-radius: 0 !important;
 }
 
 html.screen-onboard #mobmenu {
-	display: inline-block !important;
-	margin-right: 6px;
-	cursor: pointer;
+	display: none !important;
 }
 
 html.screen-onboard.cursor-idle,
@@ -177,29 +191,6 @@ html.screen-onboard.cursor-idle * {
 }
 
 /* ---- Page title bars */
-
-html.screen-onboard .onboard-clock {
-	position: absolute;
-	top: 4px;
-	right: 6px;
-	padding-left: 6px;
-	background: inherit;
-	color: var(--wb-text-light, #fff);
-	z-index: 5;
-}
-
-html.screen-onboard #banner,
-html.screen-onboard #content .rec-top-bar,
-html.screen-onboard #config .config-top-bar {
-	position: relative;
-}
-
-html.screen-onboard #content .rec-top-bar .onboard-clock,
-html.screen-onboard #config .config-top-bar .onboard-clock {
-	position: static;
-	margin-left: auto;
-	order: 99;
-}
 
 html.screen-onboard #banner td {
 	display: block;
@@ -218,16 +209,8 @@ html.screen-onboard #banner td + td {
 	padding-right: 0;
 }
 
-html.screen-onboard #banner #mobmenu br {
-	display: none;
-}
-
 html.screen-onboard #banner h1 {
 	display: inline;
-}
-
-html.screen-onboard #banner #mobmenu {
-	display: inline !important;
 }
 
 html.screen-onboard #banner select,
@@ -251,8 +234,7 @@ html.screen-onboard #config .config-top-bar {
 
 html.screen-onboard #banner h1,
 html.screen-onboard #content .rec-top-bar h1,
-html.screen-onboard #config .config-top-bar h1,
-html.screen-onboard #banner #mobmenu {
+html.screen-onboard #config .config-top-bar h1 {
 	font-size: 18px !important;
 	line-height: 24px !important;
 	margin: 0;
@@ -325,9 +307,22 @@ html.screen-onboard .col_stream img {
 }
 
 /* Timeline */
-html.screen-onboard #timeline .item {
-	padding: 2px 4px;
+html.screen-onboard #timeline .channel_name,
+html.screen-onboard #timeline .col_channel {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+html.screen-onboard #timeline .item,
+html.screen-onboard #timeline .spacer {
+	box-sizing: border-box;
+	padding: 2px 2px;
 	min-height: 20px;
+}
+
+html.screen-onboard #timeline .col_schedule {
+	overflow: hidden;
 }
 
 html.screen-onboard #timeline .timeline-time-track {
@@ -361,14 +356,9 @@ html.screen-onboard #content .list td img {
 	image-rendering: auto;
 }
 
-/* Recordings: date, channel, name, delete (time, length, summary hidden) */
-html.screen-onboard.page-recordings {
-	--wb-rec-date-width: 84px;
-	--wb-rec-channel-width: 64px;
-	--wb-rec-action-width: 56px;
-}
-
+/* Recordings: date, name, delete (time, channel, length, summary hidden) */
 html.screen-onboard.page-recordings #content #list .col_time,
+html.screen-onboard.page-recordings #content #list .col_channel,
 html.screen-onboard.page-recordings #content #list .col_length,
 html.screen-onboard.page-recordings #content #list .col_name .epg_subtitle {
 	display: none;
@@ -380,24 +370,20 @@ html.screen-onboard.page-recordings #content #list .col_name .epg_title {
 	text-overflow: ellipsis;
 }
 
-/* Timers: status, channel, date + times, name, on/off, delete (mode hidden) */
-html.screen-onboard.page-timers #content #list td:nth-child(1) { width: 20px; padding: 4px 2px; }
-html.screen-onboard.page-timers #content #list td:nth-child(2) { width: 64px; }
-html.screen-onboard.page-timers #content #list td:nth-child(3) { width: 96px; }
+/* Timers: status, date + times, name, delete (channel, mode, on/off hidden) */
+html.screen-onboard.page-timers #content #list td:nth-child(1) { width: 18px; padding: 4px 1px; }
+html.screen-onboard.page-timers #content #list td:nth-child(3) { width: 84px; }
 html.screen-onboard.page-timers #content #list td:nth-child(6) { width: auto; }
-html.screen-onboard.page-timers #content #list td:nth-child(8),
-html.screen-onboard.page-timers #content #list td:nth-child(9) { width: 22px; padding: 4px 2px; text-align: center; }
+html.screen-onboard.page-timers #content #list td:nth-child(9) { width: 20px; padding: 4px 1px; text-align: center; }
 
-html.screen-onboard.page-timers #content #list td:nth-child(7) {
+html.screen-onboard.page-timers #content #list td:nth-child(2),
+html.screen-onboard.page-timers #content #list td:nth-child(7),
+html.screen-onboard.page-timers #content #list td:nth-child(8) {
 	display: none;
 }
 
 html.screen-onboard.page-timers #content #list td.col_date .thinonly {
 	display: inline !important;
-}
-
-html.screen-onboard.page-timers #content #list td:nth-child(8) h2 {
-	visibility: hidden;
 }
 
 /* Series links: channel, name, delete (counts and next timer hidden) */
@@ -406,55 +392,61 @@ html.screen-onboard.page-links #content #list td:nth-child(2) {
 	display: none;
 }
 
-html.screen-onboard.page-links #content #list td:nth-child(3) { width: 80px; }
+html.screen-onboard.page-links #content #list td:nth-child(3) { width: 64px; }
 html.screen-onboard.page-links #content #list td:nth-child(4) { width: auto; }
 html.screen-onboard.page-links #content #list td:nth-child(6) { width: 22px; padding: 4px 2px; text-align: center; }
 
-/* ---- Config: label above value, hints hidden */
+/* ---- Config: same label | value table, squeezed to fit the width (no sideways scrolling) */
 
-html.screen-onboard #config .config-list,
-html.screen-onboard #config .config-list tbody,
-html.screen-onboard #config .config-list tr {
-	display: block;
-	width: 100%;
+html.screen-onboard #config table,
+html.screen-onboard #config .config-list {
+	width: 100% !important;
+	table-layout: fixed;
 }
 
-html.screen-onboard #config .config-list td {
-	display: block;
-	width: 100% !important;
-	box-sizing: border-box;
-	text-align: left;
-	border-bottom: none !important;
+html.screen-onboard #config td,
+html.screen-onboard #config th {
+	min-width: 0 !important;
+	white-space: normal !important;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+	overflow: hidden;
 }
 
 html.screen-onboard #config .config-list .col_label {
-	padding: 4px 6px 0;
+	width: 40% !important;
+	padding: 4px;
 }
 
 html.screen-onboard #config .config-list .col_value {
-	padding: 2px 6px 6px;
-}
-
-html.screen-onboard #config .config-list tr.row_alt {
-	border-bottom: 2px solid var(--wb-border);
+	width: 60% !important;
+	padding: 4px;
 }
 
 html.screen-onboard #config input[type=text],
-html.screen-onboard #config select {
+html.screen-onboard #config input[type=number],
+html.screen-onboard #config input[type=password],
+html.screen-onboard #config input[type=url],
+html.screen-onboard #config select,
+html.screen-onboard #config textarea {
+	width: 100% !important;
+	min-width: 0 !important;
+	max-width: 100% !important;
 	height: 24px;
-	padding: 2px 4px;
+	padding: 2px;
 	box-sizing: border-box;
-	max-width: 100%;
 }
 
+html.screen-onboard #config select[multiple],
+html.screen-onboard #config select[size],
 html.screen-onboard #config select.kb-field-edit {
 	height: auto;
 	max-height: 140px;
 }
 
-html.screen-onboard #config .config-inline-hint,
-html.screen-onboard #config .stream-prof-hint {
-	display: none;
+html.screen-onboard #config .config-top-bar {
+	flex-wrap: wrap;
+	min-width: 0;
 }
 
 html.screen-onboard #config input[type=checkbox] {

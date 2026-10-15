@@ -84,18 +84,6 @@ if (is_onboard_screen()) {
 }
 
 function init_onboard_extras() {
-  var bar = document.querySelector('#banner td, #content .rec-top-bar, #config .config-top-bar');
-  if (bar) {
-    var clock = document.createElement('span');
-    clock.className = 'onboard-clock';
-    bar.appendChild(clock);
-    var fmt = new Intl.DateTimeFormat(navigator.language, {hour: '2-digit', minute: '2-digit'});
-    var tick = function() {
-      clock.textContent = fmt.format(new Date());
-      setTimeout(tick, 60000 - (Date.now() % 60000) + 50);
-    };
-    tick();
-  }
   var root = document.documentElement;
   var idleTimer = null;
   var wake = function() {
