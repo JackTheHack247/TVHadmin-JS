@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "10"
+VERSION = "12"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -328,14 +328,42 @@ def vlc_press_f():
     return ok
 
 
+_f11_blind_pressed = set()
+
+
+def _wait_browser_fullscreen(wid, seconds):
+    end = time.time() + seconds
+    while time.time() < end:
+        if window_is_fullscreen(wid):
+            return True
+        time.sleep(0.1)
+    return False
+
+
 def make_browser_fullscreen(wid):
-    """Press F11 in Pale Moon, but only when it is not fullscreen already (F11 toggles)."""
+    """Make Pale Moon fullscreen: ask the window manager first, then fall back to F11.
+
+    F11 toggles, so it is only pressed when the window is known not to be fullscreen
+    (or once per window when xprop cannot tell us the state)."""
     if os.environ.get("TVHADMIN_BROWSER_F11", "1") in ("0", "false", "no"):
         return False
     fs = window_is_fullscreen(wid)
-    if fs is None or fs:
-        return bool(fs)
-    for _ in range(10):
+    if fs:
+        return True
+    if fs is None and not have("xprop"):
+        log_event("Cannot check Pale Moon fullscreen: xprop missing (sudo apt install x11-utils)")
+
+    if _ok(["wmctrl", "-i", "-r", wid, "-b", "add,fullscreen"]) and _wait_browser_fullscreen(wid, 1.0):
+        log_event("Pale Moon is now fullscreen")
+        return True
+
+    if fs is None:
+        if wid in _f11_blind_pressed:
+            return False
+        _f11_blind_pressed.add(wid)
+
+    activate_window(wid)
+    for _ in range(15):
         active = active_window_id()
         if active and _same_window(active, wid):
             break
@@ -343,10 +371,32 @@ def make_browser_fullscreen(wid):
     else:
         log_event("Did not press F11: Pale Moon did not take focus")
         return False
-    if press_key_in_focused_window("F11"):
+    if not press_key_in_focused_window("F11"):
+        log_event("Could not press F11 in Pale Moon (is xdotool installed?)")
+        return False
+    if fs is None or _wait_browser_fullscreen(wid, 1.5):
         log_event("Pressed F11 in Pale Moon (browser fullscreen)")
         return True
+    log_event("Pressed F11 but Pale Moon is still not fullscreen")
     return False
+
+
+_browser_fs_lock = threading.Lock()
+
+
+def browser_fullscreen():
+    if not _browser_fs_lock.acquire(blocking=False):
+        return False
+    try:
+        if focus_is_vlc():
+            return False
+        wid = find_browser_window()
+        if not wid:
+            log_event("Browser fullscreen: Pale Moon window not found")
+            return False
+        return make_browser_fullscreen(wid)
+    finally:
+        _browser_fs_lock.release()
 
 
 def raise_browser_window():
@@ -461,7 +511,7 @@ def stop_vlc():
             time.sleep(0.3)
 
 
-def launch_vlc(url, title=None, fullscreen=True):
+def launch_vlc(url, title=None, fullscreen=True, small_screen=False):
     """Start a brand-new VLC for every channel (no --one-instance), so it always
     opens in front and fullscreen."""
     global _play_counter, _vlc_proc, _vlc_fullscreen
@@ -473,6 +523,8 @@ def launch_vlc(url, title=None, fullscreen=True):
         cmd = ["vlc", "--no-one-instance", "--no-playlist-enqueue", "--no-qt-privacy-ask"]
         if fullscreen:
             cmd.append("--fullscreen")
+        if small_screen:
+            cmd.append("--no-video-title-show")
         if title:
             safe = re.sub(r"[\r\n\x00]", " ", title).strip()[:200]
             if safe:
@@ -676,7 +728,7 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
-    def _play(self, url, title=None, fullscreen=True):
+    def _play(self, url, title=None, fullscreen=True, small_screen=False):
         url = (url or "").strip()
         if not url:
             self._json(400, {"ok": False, "error": "missing url"})
@@ -685,7 +737,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(403, {"ok": False, "error": "url not allowed"})
             return
         try:
-            launch_vlc(url, title=title, fullscreen=fullscreen)
+            launch_vlc(url, title=title, fullscreen=fullscreen, small_screen=small_screen)
         except FileNotFoundError:
             self._json(500, {"ok": False, "error": "vlc not found in PATH"})
             return
@@ -704,7 +756,8 @@ class Handler(BaseHTTPRequestHandler):
             url = unquote(qs["url"][0]) if qs.get("url") else ""
             title = unquote(qs["title"][0]) if qs.get("title") else None
             fullscreen = qs.get("fullscreen", ["1"])[0] not in ("0", "false", "no")
-            self._play(url, title=title, fullscreen=fullscreen)
+            small_screen = qs.get("small", ["0"])[0] in ("1", "true", "yes")
+            self._play(url, title=title, fullscreen=fullscreen, small_screen=small_screen)
             return
         if path == "/stop":
             stop_vlc()
@@ -712,6 +765,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/raise":
             self._json(200, {"ok": raise_browser_window()})
+            return
+        if path == "/browser-fullscreen":
+            threading.Thread(target=browser_fullscreen, daemon=True).start()
+            self._json(200, {"ok": True})
             return
         if path == "/hotkey-pending":
             self._json(200, {"ok": True, "action": consume_hotkey_action()})

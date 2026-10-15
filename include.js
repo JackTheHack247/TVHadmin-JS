@@ -65,14 +65,48 @@ if (cookies.THEME == 1) link.href = 'style.dark.css';
 else if (cookies.THEME == 2) link.href = 'style.blue.css';
 else link.href = 'style.css';
 document.head.appendChild(link);
-if (cookies.SCREEN === 'onboard') {
+function is_onboard_screen() {
+  if (cookies.SCREEN === 'onboard') return true;
+  return cookies.SCREEN === 'auto' && Math.max(screen.width, screen.height) <= 480;
+}
+
+if (is_onboard_screen()) {
   document.documentElement.classList.add('screen-onboard');
+  var pageName = (location.pathname.split('/').pop() || 'TVHadmin.html').replace(/^_prev_/, '').replace(/\.html?$/i, '');
+  document.documentElement.classList.add('page-' + pageName.toLowerCase());
   var onboardLink = document.createElement('link');
   onboardLink.rel = 'stylesheet';
   onboardLink.type = 'text/css';
   onboardLink.href = 'onboard.css';
   document.head.appendChild(onboardLink);
   WHATSON_TITLE_MAX_CHARS = 18;
+  document.addEventListener('DOMContentLoaded', init_onboard_extras);
+}
+
+function init_onboard_extras() {
+  var bar = document.querySelector('#banner td, #content .rec-top-bar, #config .config-top-bar');
+  if (bar) {
+    var clock = document.createElement('span');
+    clock.className = 'onboard-clock';
+    bar.appendChild(clock);
+    var fmt = new Intl.DateTimeFormat(navigator.language, {hour: '2-digit', minute: '2-digit'});
+    var tick = function() {
+      clock.textContent = fmt.format(new Date());
+      setTimeout(tick, 60000 - (Date.now() % 60000) + 50);
+    };
+    tick();
+  }
+  var root = document.documentElement;
+  var idleTimer = null;
+  var wake = function() {
+    root.classList.remove('cursor-idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function() { root.classList.add('cursor-idle'); }, 3000);
+  };
+  document.addEventListener('mousemove', wake);
+  document.addEventListener('mousedown', wake);
+  document.addEventListener('keydown', function() { root.classList.add('cursor-idle'); });
+  wake();
 }
 
 function get_api_base() {
@@ -253,6 +287,7 @@ async function launch_external_vlc(streamUrl, label) {
       var q = helper + '/play?url=' + encodeURIComponent(abs);
       if (label) q += '&title=' + encodeURIComponent(String(label).slice(0, 200));
       if (cookies.VLC_FULLSCREEN === '0') q += '&fullscreen=0';
+      if (is_onboard_screen()) q += '&small=1';
       const response = await fetch(q, { method: 'GET', mode: 'cors', cache: 'no-store' });
       if (!response.ok) log_preview_issue('external-vlc', 'helper HTTP ' + response.status, abs);
       return;
@@ -1564,6 +1599,8 @@ function init_vlc_hotkey_poll() {
   if (window._tvh_hotkey_poll_init) return;
   if (preview_player_mode() !== 'external' || !vlc_helper_base()) return;
   window._tvh_hotkey_poll_init = true;
+  fetch(vlc_helper_base() + '/browser-fullscreen', { method: 'GET', mode: 'cors', cache: 'no-store' })
+    .catch(function() {});
   setInterval(function() {
     fetch(vlc_helper_base() + '/hotkey-pending', { method: 'GET', mode: 'cors', cache: 'no-store' })
       .then(function(response) { return response.ok ? response.json() : null; })
