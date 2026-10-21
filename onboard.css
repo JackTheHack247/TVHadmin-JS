@@ -13,7 +13,7 @@
 
 html.screen-onboard {
 	--wb-sidebar-width: 86px;
-	--wb-logo-height: 62px;
+	--wb-logo-height: 150px;
 	--wb-nav-gap: 0px;
 	--wb-whatson-duration-width: 44px;
 	--wb-whatson-channel-width: 64px;
@@ -118,7 +118,7 @@ html.screen-onboard #navigation .logo {
 	border-top: none !important;
 }
 
-/* Pixel-art version of the rotated TV logo, drawn for this exact 80x60 box
+/* Pixel-art version of the rotated TV logo, drawn for this exact 80x84 box
    (scripts/build_onboard_logo.py). Shown 1:1: no transform, no scaling. */
 html.screen-onboard #navigation .logo::before {
 	top: 0;
@@ -156,7 +156,7 @@ html.screen-onboard #navigation .navi {
 
 html.screen-onboard #navigation .navi a {
 	min-height: 0 !important;
-	padding: 2px 4px !important;
+	padding: 0 4px !important;
 	white-space: normal;
 }
 
@@ -183,12 +183,12 @@ html.screen-onboard #navigation .nav_keybinds-title {
 html.screen-onboard #navigation .nav_keybind {
 	display: flex !important;
 	margin: 0;
-	height: 16px;
+	height: 14px;
 }
 
 html.screen-onboard #navigation .nav_key,
 html.screen-onboard #navigation .nav_keybind-label {
-	line-height: 14px !important;
+	line-height: 12px !important;
 }
 
 html.screen-onboard #navigation .nav_key {
