@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "12"
+VERSION = "13"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -511,7 +511,7 @@ def stop_vlc():
             time.sleep(0.3)
 
 
-def launch_vlc(url, title=None, fullscreen=True, small_screen=False):
+def launch_vlc(url, title=None, fullscreen=True, small_screen=False, radio=False):
     """Start a brand-new VLC for every channel (no --one-instance), so it always
     opens in front and fullscreen."""
     global _play_counter, _vlc_proc, _vlc_fullscreen
@@ -525,6 +525,11 @@ def launch_vlc(url, title=None, fullscreen=True, small_screen=False):
             cmd.append("--fullscreen")
         if small_screen:
             cmd.append("--no-video-title-show")
+        if radio:
+            # Radio has no picture: show VLC's moving spectrum so there is a fullscreen window.
+            cmd += ["--audio-visual=visual", "--effect-list=spectrum",
+                    "--effect-width=%d" % (320 if small_screen else 1280),
+                    "--effect-height=%d" % (240 if small_screen else 720)]
         if title:
             safe = re.sub(r"[\r\n\x00]", " ", title).strip()[:200]
             if safe:
@@ -728,7 +733,7 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
-    def _play(self, url, title=None, fullscreen=True, small_screen=False):
+    def _play(self, url, title=None, fullscreen=True, small_screen=False, radio=False):
         url = (url or "").strip()
         if not url:
             self._json(400, {"ok": False, "error": "missing url"})
@@ -737,7 +742,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(403, {"ok": False, "error": "url not allowed"})
             return
         try:
-            launch_vlc(url, title=title, fullscreen=fullscreen, small_screen=small_screen)
+            launch_vlc(url, title=title, fullscreen=fullscreen, small_screen=small_screen, radio=radio)
         except FileNotFoundError:
             self._json(500, {"ok": False, "error": "vlc not found in PATH"})
             return
@@ -745,7 +750,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(500, {"ok": False, "error": str(exc)})
             return
         set_tv_ui_mode("video")
-        log_event("Playing in VLC: %s" % (title or url[:80]))
+        log_event("Playing in VLC%s: %s" % (" (radio)" if radio else "", title or url[:80]))
         self._json(200, {"ok": True})
 
     def do_GET(self):
@@ -757,7 +762,8 @@ class Handler(BaseHTTPRequestHandler):
             title = unquote(qs["title"][0]) if qs.get("title") else None
             fullscreen = qs.get("fullscreen", ["1"])[0] not in ("0", "false", "no")
             small_screen = qs.get("small", ["0"])[0] in ("1", "true", "yes")
-            self._play(url, title=title, fullscreen=fullscreen, small_screen=small_screen)
+            radio = qs.get("radio", ["0"])[0] in ("1", "true", "yes")
+            self._play(url, title=title, fullscreen=fullscreen, small_screen=small_screen, radio=radio)
             return
         if path == "/stop":
             stop_vlc()

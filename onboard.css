@@ -13,14 +13,12 @@
 
 html.screen-onboard {
 	--wb-sidebar-width: 72px;
-	--wb-logo-height: 30px;
-	--wb-logo-rotate: 0deg;
-	--wb-logo-scale: 1;
+	--wb-logo-height: 54px;
 	--wb-nav-gap: 0px;
 	--wb-whatson-duration-width: 60px;
-	--wb-whatson-channel-width: 72px;
-	--wb-whatson-title-width: 48px;
-	--wb-whatson-desc-width: auto;
+	--wb-whatson-channel-width: 88px;
+	--wb-whatson-title-width: auto;
+	--wb-whatson-desc-width: 0px;
 	--wb-whatson-play-width: 18px;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
@@ -115,16 +113,24 @@ html.screen-onboard #navigation .logo {
 	height: var(--wb-logo-height) !important;
 	width: 100% !important;
 	min-width: 0 !important;
-	padding: 2px !important;
+	padding: 0 !important;
 	border: 2px solid var(--wb-border) !important;
 	border-top: none !important;
 }
 
+/* Pixel-art version of the rotated TV logo, drawn for this exact 66x52 box
+   (scripts/build_onboard_logo.py). Shown 1:1: no transform, no scaling. */
 html.screen-onboard #navigation .logo::before {
-	top: 2px;
-	right: 2px;
-	bottom: 2px;
-	left: 2px;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background-image: url('images/watchbro-onboard.png');
+	background-size: auto;
+	background-position: center;
+	transform: none;
+	image-rendering: -moz-crisp-edges;
+	image-rendering: pixelated;
 }
 
 html.screen-onboard #navigation .search,
@@ -150,7 +156,7 @@ html.screen-onboard #navigation .navi {
 
 html.screen-onboard #navigation .navi a {
 	min-height: 0 !important;
-	padding: 4px !important;
+	padding: 2px 4px !important;
 	white-space: normal;
 }
 
@@ -176,7 +182,7 @@ html.screen-onboard #navigation .nav_keybinds-title {
 
 html.screen-onboard #navigation .nav_keybind {
 	display: flex !important;
-	margin: 0 0 2px 0;
+	margin: 0 0 1px 0;
 }
 
 html.screen-onboard #navigation .nav_key {
@@ -287,10 +293,10 @@ html.screen-onboard #whatson .list tbody tr td.col_duration {
 
 html.screen-onboard #whatson table.percent {
 	position: absolute;
-	top: 2px;
-	left: 2px;
-	width: calc(100% - 4px);
-	height: calc(100% - 4px);
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
 	min-height: 0;
 	box-sizing: border-box;
 }
@@ -312,22 +318,22 @@ html.screen-onboard #whatson .col_title .epg_title,
 html.screen-onboard #whatson tr.title-wraps .col_title .epg_title {
 	display: block !important;
 	white-space: normal !important;
-	overflow-wrap: break-word;
-	word-wrap: break-word;
+	overflow-wrap: normal !important;
+	word-wrap: normal !important;
+	word-break: normal !important;
 	overflow: hidden;
 	max-height: 32px !important;
 	-webkit-line-clamp: unset;
 }
 
-/* Description: wraps and fills up to three lines */
-html.screen-onboard #whatson .col_desc .epg_subtitle,
-html.screen-onboard #whatson tr.desc-wraps .col_desc .epg_subtitle {
-	display: block !important;
-	white-space: normal !important;
-	overflow-wrap: break-word;
-	word-wrap: break-word;
-	overflow: hidden;
-	max-height: 48px !important;
+/* Description hidden: the title gets its space */
+html.screen-onboard #whatson .list tbody tr td.col_desc {
+	padding: 0 !important;
+	border-width: 0 !important;
+}
+
+html.screen-onboard #whatson .col_desc * {
+	display: none !important;
 }
 
 html.screen-onboard .col_stream img {

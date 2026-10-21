@@ -263,7 +263,7 @@ function download_vlc_m3u_playlist(absUrl, label) {
   setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 2000);
 }
 
-async function launch_external_vlc(streamUrl, label) {
+async function launch_external_vlc(streamUrl, label, radio) {
   if (!streamUrl) return;
   var abs = absolute_stream_url(streamUrl);
   if (/^https:/i.test(abs)) abs = abs.replace(/^https:/i, 'http:');
@@ -276,6 +276,7 @@ async function launch_external_vlc(streamUrl, label) {
       if (label) q += '&title=' + encodeURIComponent(String(label).slice(0, 200));
       if (cookies.VLC_FULLSCREEN === '0') q += '&fullscreen=0';
       if (is_onboard_screen()) q += '&small=1';
+      if (radio) q += '&radio=1';
       const response = await fetch(q, { method: 'GET', mode: 'cors', cache: 'no-store' });
       if (!response.ok) log_preview_issue('external-vlc', 'helper HTTP ' + response.status, abs);
       return;
@@ -620,8 +621,8 @@ function pick_vlc_stream_profile(name, uuid) {
   function has(p) {
     return p && available.indexOf(p) !== -1;
   }
-  if (is_radio_channel(name, uuid) && has('audio')) return 'audio';
   if (has('pass')) return 'pass';
+  if (is_radio_channel(name, uuid) && has('audio')) return 'audio';
   if (has('matroska')) return 'matroska';
   if (cookies.SUUID && has(cookies.SUUID)) {
     var s = cookies.SUUID;
@@ -1033,14 +1034,17 @@ async function resolve_play_ticket_url(uuid, type, profile, title) {
       return playUrl;
     }
     const ctype = (response.headers.get('content-type') || '').toLowerCase();
-    if (ctype.indexOf('octet-stream') !== -1 || ctype.indexOf('mp2t') !== -1 ||
-        (ctype.indexOf('video') !== -1 && ctype.indexOf('mpegurl') === -1)) {
-      return playUrl;
-    }
     if (ctype.indexOf('mpegurl') !== -1 || ctype.indexOf('m3u') !== -1 || ctype.indexOf('text') !== -1) {
       const text = await response.text();
       const fromM3u = parse_m3u_stream_url(text);
       if (fromM3u) return fromM3u;
+    } else {
+      // A live stream: stop downloading it, the player opens its own connection.
+      try { if (response.body && response.body.cancel) response.body.cancel(); } catch (e) {}
+    }
+    if (ctype.indexOf('octet-stream') !== -1 || ctype.indexOf('mp2t') !== -1 ||
+        ctype.indexOf('video') !== -1 || ctype.indexOf('audio') !== -1) {
+      return playUrl;
     }
     if (response.url && response.url !== abs && /\/stream\//i.test(response.url)) {
       return response.url;
@@ -1736,7 +1740,7 @@ async function play_in_external_vlc(uuid, name, type, forceProfile) {
   if (!url) return;
   store_preview_channel(uuid, name, url, 0, type);
   close_menu_overlay();
-  await launch_external_vlc(url, name);
+  await launch_external_vlc(url, name, is_radio_channel(name, uuid));
   enter_external_tv_video_mode();
 }
 
