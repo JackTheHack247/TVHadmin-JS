@@ -15,7 +15,7 @@ html.screen-onboard {
 	--wb-sidebar-width: 86px;
 	--wb-logo-height: 62px;
 	--wb-nav-gap: 0px;
-	--wb-whatson-duration-width: 16px;
+	--wb-whatson-duration-width: 34px;
 	--wb-whatson-channel-width: 64px;
 	--wb-whatson-title-width: 66px;
 	--wb-whatson-desc-width: auto;
@@ -337,6 +337,7 @@ html.screen-onboard #whatson tr.title-wraps .col_title .epg_title {
 html.screen-onboard #whatson .list > tbody > tr > td.col_desc {
 	position: relative;
 	padding: 0 !important;
+	border: 2px solid var(--wb-border) !important;
 }
 
 html.screen-onboard #whatson .col_desc .epg_subtitle,
@@ -357,12 +358,7 @@ html.screen-onboard #whatson tr.desc-wraps .col_desc .epg_subtitle {
 
 /* No play column: Enter or a tap on the row plays */
 html.screen-onboard #whatson .list > tbody > tr > td.col_stream {
-	padding: 0 !important;
-	border-width: 0 !important;
-}
-
-html.screen-onboard #whatson .col_stream * {
-	display: none !important;
+	display: none;
 }
 
 html.screen-onboard #whatson .list > tbody > tr {
