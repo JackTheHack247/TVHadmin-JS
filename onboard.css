@@ -15,7 +15,7 @@ html.screen-onboard {
 	--wb-sidebar-width: 86px;
 	--wb-logo-height: 62px;
 	--wb-nav-gap: 0px;
-	--wb-whatson-duration-width: 34px;
+	--wb-whatson-duration-width: 44px;
 	--wb-whatson-channel-width: 64px;
 	--wb-whatson-title-width: 66px;
 	--wb-whatson-desc-width: auto;
@@ -292,18 +292,18 @@ html.screen-onboard #whatson .col_stream {
 	vertical-align: middle;
 }
 
+/* Progress bar height is set by fit_onboard_rows() in now.html to fill the
+   cell; absolute positioning inside table cells is unreliable in Pale Moon */
 html.screen-onboard #whatson .list > tbody > tr > td.col_duration {
-	position: relative;
 	padding: 0 !important;
+	vertical-align: middle;
 }
 
 html.screen-onboard #whatson table.percent {
-	position: absolute;
-	top: 0;
-	left: 0;
 	width: 100%;
-	height: 100%;
+	height: 16px;
 	min-height: 0;
+	margin: 0;
 	box-sizing: border-box;
 }
 
@@ -333,22 +333,17 @@ html.screen-onboard #whatson tr.title-wraps .col_title .epg_title {
 }
 
 /* Description: fills whatever height the channel and title give the row (one
-   or two lines) but never makes the row taller itself */
+   or two lines) but never makes the row taller itself; fit_onboard_rows()
+   sets its max-height */
 html.screen-onboard #whatson .list > tbody > tr > td.col_desc {
-	position: relative;
-	padding: 0 !important;
 	border: 2px solid var(--wb-border) !important;
+	background: var(--wb-content) !important;
 }
 
 html.screen-onboard #whatson .col_desc .epg_subtitle,
 html.screen-onboard #whatson tr.desc-wraps .col_desc .epg_subtitle {
 	display: block;
-	position: absolute;
-	top: 2px;
-	right: 3px;
-	bottom: 2px;
-	left: 3px;
-	max-height: none;
+	max-height: 16px;
 	white-space: normal !important;
 	overflow-wrap: normal !important;
 	word-wrap: normal !important;

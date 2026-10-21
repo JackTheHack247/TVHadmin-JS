@@ -93,6 +93,28 @@
         row.classList.toggle('title-wraps', titleWraps);
         row.classList.toggle('desc-wraps', desc_row_wraps(row, channelWraps));
       });
+      if (is_onboard_screen()) fit_onboard_rows();
+    });
+  }
+
+  // Onboard: the progress bar fills its cell and the description shows as many
+  // lines as the channel/title made the row, without making the row taller.
+  function fit_onboard_rows() {
+    var rows = document.querySelectorAll('#whatson #list tbody tr.row_alt');
+    var parts = [];
+    rows.forEach(function(row) {
+      var bar = row.querySelector('table.percent');
+      var desc = row.querySelector('.col_desc .epg_subtitle');
+      if (bar) bar.style.height = '0px';
+      if (desc) desc.style.maxHeight = '16px';
+      parts.push([row, bar, desc]);
+    });
+    parts.forEach(function(p) {
+      var cell = p[0].querySelector('td.col_channel') || p[0].querySelector('td.col_title');
+      if (!cell) return;
+      var inner = cell.clientHeight;
+      if (p[1]) p[1].style.height = inner + 'px';
+      if (p[2]) p[2].style.maxHeight = Math.max(16, Math.floor((inner - 4) / 16) * 16) + 'px';
     });
   }
 
