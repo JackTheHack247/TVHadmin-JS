@@ -127,7 +127,7 @@
         }
 	else s += `<span class="channel_label">${name}</span>`;
 	s += `</div></td><td class='col_title'>` + whatson_epg_title_html(e.title) + `</td>`;
-	s += `<td class='col_desc'><div class='epg_subtitle'>${summ}</div></td>`;
+	s += summ ? `<td class='col_desc'><div class='epg_subtitle'>${summ}</div></td>` : `<td class='col_desc'></td>`;
       }
       else {
         var s = `<td class='col_duration'></td><td class='col_channel'><div class='channel_name'>`;
@@ -225,6 +225,12 @@
         if (row) play_now_row(row);
       }
     });
+    if (is_onboard_screen()) {
+      document.querySelector('#whatson #list tbody').addEventListener('click', function(ev) {
+        var row = ev.target.closest('tr.row_alt');
+        if (row && !ev.target.closest('a')) play_now_row(row);
+      });
+    }
     if (channels.length && sessionStorage.getItem('preview_active') !== '1') {
       for (const c of channels) {
         if (channel_visible(c, media)) {

@@ -12,14 +12,14 @@
    (12px = 2x2 screen pixels per font pixel, 18px = 3x3) or the text goes blurry. */
 
 html.screen-onboard {
-	--wb-sidebar-width: 72px;
-	--wb-logo-height: 54px;
+	--wb-sidebar-width: 86px;
+	--wb-logo-height: 62px;
 	--wb-nav-gap: 0px;
-	--wb-whatson-duration-width: 60px;
-	--wb-whatson-channel-width: 88px;
-	--wb-whatson-title-width: auto;
-	--wb-whatson-desc-width: 0px;
-	--wb-whatson-play-width: 18px;
+	--wb-whatson-duration-width: 16px;
+	--wb-whatson-channel-width: 64px;
+	--wb-whatson-title-width: 66px;
+	--wb-whatson-desc-width: auto;
+	--wb-whatson-play-width: 0px;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
 	--wb-rec-date-width: 76px;
@@ -118,7 +118,7 @@ html.screen-onboard #navigation .logo {
 	border-top: none !important;
 }
 
-/* Pixel-art version of the rotated TV logo, drawn for this exact 66x52 box
+/* Pixel-art version of the rotated TV logo, drawn for this exact 80x60 box
    (scripts/build_onboard_logo.py). Shown 1:1: no transform, no scaling. */
 html.screen-onboard #navigation .logo::before {
 	top: 0;
@@ -141,7 +141,7 @@ html.screen-onboard #navigation .tl-bar {
 
 html.screen-onboard #navigation .nav_bar {
 	display: block !important;
-	flex: 1 1 auto !important;
+	flex: 0 0 auto !important;
 	min-height: 0;
 	margin-top: 0;
 	overflow-x: hidden !important;
@@ -182,7 +182,13 @@ html.screen-onboard #navigation .nav_keybinds-title {
 
 html.screen-onboard #navigation .nav_keybind {
 	display: flex !important;
-	margin: 0 0 1px 0;
+	margin: 0;
+	height: 16px;
+}
+
+html.screen-onboard #navigation .nav_key,
+html.screen-onboard #navigation .nav_keybind-label {
+	line-height: 14px !important;
 }
 
 html.screen-onboard #navigation .nav_key {
@@ -271,8 +277,9 @@ html.screen-onboard #content .col_channel img {
 	image-rendering: auto;
 }
 
-/* What's On: progress, channel, title, play (description hidden) */
-html.screen-onboard #whatson .list tbody tr td {
+/* What's On: progress | channel | title | description on one line, two when
+   the channel or title wraps */
+html.screen-onboard #whatson .list > tbody > tr > td {
 	border-width: 2px;
 }
 
@@ -285,10 +292,9 @@ html.screen-onboard #whatson .col_stream {
 	vertical-align: middle;
 }
 
-html.screen-onboard #whatson .list tbody tr td.col_duration {
+html.screen-onboard #whatson .list > tbody > tr > td.col_duration {
 	position: relative;
 	padding: 0 !important;
-	height: 36px;
 }
 
 html.screen-onboard #whatson table.percent {
@@ -301,7 +307,7 @@ html.screen-onboard #whatson table.percent {
 	box-sizing: border-box;
 }
 
-/* Channel: 8 letters per line, second line only at the end of a word */
+/* Channel: 7 letters per line, second line only at the end of a word */
 html.screen-onboard #whatson .channel_label {
 	display: block !important;
 	white-space: normal !important;
@@ -313,7 +319,7 @@ html.screen-onboard #whatson .channel_label {
 	-webkit-line-clamp: unset;
 }
 
-/* Title: wraps onto a second line when too long */
+/* Title: 7 letters per line, wraps onto a second line when too long */
 html.screen-onboard #whatson .col_title .epg_title,
 html.screen-onboard #whatson tr.title-wraps .col_title .epg_title {
 	display: block !important;
@@ -326,14 +332,41 @@ html.screen-onboard #whatson tr.title-wraps .col_title .epg_title {
 	-webkit-line-clamp: unset;
 }
 
-/* Description hidden: the title gets its space */
-html.screen-onboard #whatson .list tbody tr td.col_desc {
+/* Description: fills whatever height the channel and title give the row (one
+   or two lines) but never makes the row taller itself */
+html.screen-onboard #whatson .list > tbody > tr > td.col_desc {
+	position: relative;
+	padding: 0 !important;
+}
+
+html.screen-onboard #whatson .col_desc .epg_subtitle,
+html.screen-onboard #whatson tr.desc-wraps .col_desc .epg_subtitle {
+	display: block;
+	position: absolute;
+	top: 2px;
+	right: 3px;
+	bottom: 2px;
+	left: 3px;
+	max-height: none;
+	white-space: normal !important;
+	overflow-wrap: normal !important;
+	word-wrap: normal !important;
+	word-break: normal !important;
+	overflow: hidden;
+}
+
+/* No play column: Enter or a tap on the row plays */
+html.screen-onboard #whatson .list > tbody > tr > td.col_stream {
 	padding: 0 !important;
 	border-width: 0 !important;
 }
 
-html.screen-onboard #whatson .col_desc * {
+html.screen-onboard #whatson .col_stream * {
 	display: none !important;
+}
+
+html.screen-onboard #whatson .list > tbody > tr {
+	cursor: pointer;
 }
 
 html.screen-onboard .col_stream img {

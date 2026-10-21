@@ -15,7 +15,7 @@ import sys
 
 from PIL import Image
 
-BOX_W, BOX_H = 66, 52     # inside of the 70x54 onboard logo box (2px border, no top border)
+BOX_W, BOX_H = 80, 60     # inside of the 84x62 onboard logo box (2px border, no top border)
 ANGLE = int(os.environ.get("LOGO_ANGLE", 60))  # CSS rotate(-60deg) = 60deg anticlockwise
 MARGIN = 1                # empty pixels kept round the word
 SUPER = 16                # draw big, then reduce to the pixel grid
