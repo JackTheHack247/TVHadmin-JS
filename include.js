@@ -1805,9 +1805,10 @@ function init_navigation() {
   }
   const nav = document.getElementById('navigation');
   if (nav && !nav.querySelector('.nav_keybinds')) {
+    const short = is_onboard_screen();
     const keybinds = [
-      ['↑ ↓', 'Navigate'],
-      ['←', 'Sidebar'],
+      ['↑ ↓', short ? 'Nav' : 'Navigate'],
+      ['←', short ? 'Side' : 'Sidebar'],
       ['→', 'Channel list'],
       ['Enter', 'Play']
     ];
