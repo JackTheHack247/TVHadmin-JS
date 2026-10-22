@@ -2657,37 +2657,11 @@ function click_tag(prefix, tagID) {
 }
 
 function build_media_filter(pagePrefix, tags) {
-  const media = { All: 1 };
-  for (var key in cookies) {
-    if (!key.startsWith('Tag_')) continue;
-    var tag = decodeURIComponent(key.substring(4));
-    if (tag === 'All') continue;
-    var pageKey = pagePrefix + key.substring(4);
-    var sessionVal = sessionStorage.getItem(pagePrefix + tag);
-    if (sessionVal == 1 || (sessionVal === null && cookies[pageKey])) {
-      media[tags[tag]] = 1;
-    }
-  }
-  return media;
+  return { All: 1 };
 }
 
 function build_tag_checkboxes(pagePrefix) {
-  var s = "<span class='wideonly'>";
-  for (var key in cookies) {
-    if (!key.startsWith('Tag_')) continue;
-    var tag = decodeURIComponent(key.substring(4));
-    if (tag === 'All') continue;
-    var pageKey = pagePrefix + key.substring(4);
-    s += "<div class='media'>" +
-      `<label for='${tag}'>${tag}:</label>` +
-      `<input type='checkbox' name='${tag}' id='${tag}' onchange='click_tag("${pagePrefix}", "${tag}")'`;
-    var sessionVal = sessionStorage.getItem(pagePrefix + tag);
-    if (sessionVal == 1) s += " checked";
-    else if (sessionVal === null && cookies[pageKey]) s += " checked";
-    s += "></div>";
-  }
-  s += "</span>";
-  return s;
+  return '';
 }
 
 function intersect(tags, media) {

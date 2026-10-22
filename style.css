@@ -670,6 +670,11 @@ body.layout-no-preview #mobmenu {
 	display: inline;
 }
 
+#mediatags,
+#recmediatags {
+	display: none;
+}
+
 #wrapper {
 	display: flex;
 	flex: 1;
