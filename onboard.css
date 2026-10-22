@@ -13,7 +13,10 @@
 
 html.screen-onboard {
 	--wb-sidebar-width: 86px;
-	--wb-logo-height: 150px;
+	--wb-logo-height: 86px;
+	--wb-onboard-logo-scale: 2;    /* logo size: 1 = normal, 2 = double, 1.5 = one and a half... */
+	--wb-onboard-logo-x: 0px;      /* move the logo right (+) or left (-) */
+	--wb-onboard-logo-y: 0px;      /* move the logo down (+) or up (-) */
 	--wb-nav-gap: 0px;
 	--wb-whatson-duration-width: 44px;
 	--wb-whatson-channel-width: 64px;
@@ -105,7 +108,7 @@ html.screen-onboard #navigation {
 	max-height: none !important;
 	flex-direction: column !important;
 	flex-shrink: 0;
-	overflow: hidden !important;
+	overflow: visible !important;
 }
 
 html.screen-onboard #navigation .logo {
@@ -116,19 +119,28 @@ html.screen-onboard #navigation .logo {
 	padding: 0 !important;
 	border: 2px solid var(--wb-border) !important;
 	border-top: none !important;
+	overflow: visible !important;
+	z-index: 10;
 }
 
-/* Pixel-art version of the rotated TV logo, drawn for this exact 80x84 box
-   (scripts/build_onboard_logo.py). Shown 1:1: no transform, no scaling. */
+/* Pixel-art version of the rotated TV logo, drawn for an 80x84 box
+   (scripts/build_onboard_logo.py). Scaled by --wb-onboard-logo-scale from the
+   centre of the box; it can spill past the box and the sidebar without
+   changing their size. Whole numbers keep every pixel square and sharp. */
 html.screen-onboard #navigation .logo::before {
-	top: 0;
-	right: 0;
-	bottom: 0;
-	left: 0;
+	--wb-onboard-logo-w: 80px;
+	--wb-onboard-logo-h: 84px;
+	top: calc(50% - var(--wb-onboard-logo-h) * var(--wb-onboard-logo-scale) / 2 + var(--wb-onboard-logo-y));
+	left: calc(50% - var(--wb-onboard-logo-w) * var(--wb-onboard-logo-scale) / 2 + var(--wb-onboard-logo-x));
+	right: auto;
+	bottom: auto;
+	width: calc(var(--wb-onboard-logo-w) * var(--wb-onboard-logo-scale));
+	height: calc(var(--wb-onboard-logo-h) * var(--wb-onboard-logo-scale));
 	background-image: url('images/watchbro-onboard.png');
-	background-size: auto;
+	background-size: 100% 100%;
 	background-position: center;
 	transform: none;
+	pointer-events: none;
 	image-rendering: -moz-crisp-edges;
 	image-rendering: pixelated;
 }
