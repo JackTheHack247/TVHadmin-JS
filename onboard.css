@@ -104,18 +104,6 @@ html.screen-onboard #tvh-vlc-hint {
 	display: none !important;
 }
 
-html.screen-onboard #epgkind {
-	display: inline-block !important;
-	padding: 0 4px !important;
-}
-
-html.screen-onboard .epg-kind-btn {
-	height: 18px;
-	padding: 0 4px;
-	margin: 0 2px 0 0;
-	border-width: 2px;
-}
-
 /* ---- Sidebar: same as the TV layout, just narrower (undo style.css small-screen rules) */
 
 html.screen-onboard #navigation {

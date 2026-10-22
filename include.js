@@ -552,28 +552,6 @@ function is_radio_channel(name, uuid) {
   return /\bradio\b|\bfm\b|\bdab\b|bbc sounds/i.test(name || '');
 }
 
-function get_epg_kind() {
-  return sessionStorage.getItem('epg_kind') === 'radio' ? 'radio' : 'tv';
-}
-
-function set_epg_kind(kind) {
-  sessionStorage.setItem('epg_kind', kind === 'radio' ? 'radio' : 'tv');
-  location.reload();
-}
-
-function channel_matches_kind(ch) {
-  var radio = channel_is_radio(ch);
-  return get_epg_kind() === 'radio' ? radio : !radio;
-}
-
-function build_kind_toggle() {
-  var kind = get_epg_kind();
-  return '<div class="epg-kind">' +
-    '<button type="button" class="epg-kind-btn' + (kind === 'tv' ? ' content-selected' : '') + '" onclick="set_epg_kind(\'tv\')">TV</button>' +
-    '<button type="button" class="epg-kind-btn' + (kind === 'radio' ? ' content-selected' : '') + '" onclick="set_epg_kind(\'radio\')">Radio</button>' +
-    '</div>';
-}
-
 function service_is_mapped(s) {
   if (!s) return false;
   if (s.mapped) return true;
@@ -2615,6 +2593,13 @@ async function get_channels(sort) {
     cache_channels(channels);
     await sync_channel_tag_settings();
     await load_radio_tag_ids();
+    if (await ensure_radio_channels()) {
+      const again = await fetch_json("/api/channel/grid?limit=9999");
+      if (again && again.entries) {
+        channels = again.entries;
+        cache_channels(channels);
+      }
+    }
     await ensure_stream_profile();
     await ensure_recording_profile();
   }
@@ -2715,7 +2700,6 @@ function intersect(tags, media) {
 }
 
 function channel_visible(c, media) {
-  if (!channel_matches_kind(c)) return false;
   if (!media || media.All) return true;
   if (!Object.keys(media).length) return true;
   return intersect(c.tags, media) > 0;
