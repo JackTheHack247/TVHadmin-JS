@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "13"
+VERSION = "14"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -511,6 +511,36 @@ def stop_vlc():
             time.sleep(0.3)
 
 
+VLC_PLUGIN_DIRS = [
+    "/usr/lib/*/vlc/plugins",
+    "/usr/lib/vlc/plugins",
+    "/usr/local/lib/vlc/plugins",
+    "/usr/local/lib/*/vlc/plugins",
+]
+VLC_LOG_PATH = os.path.expanduser("~/.cache/tvhadmin-vlc.log")
+
+
+def vlc_has_visualization():
+    """True if VLC's visualisation plugin (vlc-plugin-visualization) is installed."""
+    import glob
+    for base in VLC_PLUGIN_DIRS:
+        if glob.glob(os.path.join(base, "visualization", "libvisual_plugin.so")):
+            return True
+    return False
+
+
+def _open_vlc_log(cmd):
+    """VLC's own messages for the last channel, for when there is no sound or picture."""
+    try:
+        os.makedirs(os.path.dirname(VLC_LOG_PATH), exist_ok=True)
+        f = open(VLC_LOG_PATH, "w")
+        f.write(" ".join(cmd) + "\n\n")
+        f.flush()
+        return f
+    except OSError:
+        return None
+
+
 def launch_vlc(url, title=None, fullscreen=True, small_screen=False, radio=False):
     """Start a brand-new VLC for every channel (no --one-instance), so it always
     opens in front and fullscreen."""
@@ -525,22 +555,28 @@ def launch_vlc(url, title=None, fullscreen=True, small_screen=False, radio=False
             cmd.append("--fullscreen")
         if small_screen:
             cmd.append("--no-video-title-show")
-        if radio:
+        if radio and vlc_has_visualization():
             # Radio has no picture: show VLC's moving spectrum so there is a fullscreen window.
             cmd += ["--audio-visual=visual", "--effect-list=spectrum",
                     "--effect-width=%d" % (320 if small_screen else 1280),
                     "--effect-height=%d" % (240 if small_screen else 720)]
+        elif radio:
+            # Asking VLC for a visualisation it doesn't have kills the sound too.
+            log_event("Radio: no spectrum (run: sudo apt install vlc-plugin-visualization)")
         if title:
             safe = re.sub(r"[\r\n\x00]", " ", title).strip()[:200]
             if safe:
                 cmd.append("--meta-title=" + safe)
         cmd.append(url)
+        vlc_log = _open_vlc_log(cmd)
         _vlc_proc = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=vlc_log or subprocess.DEVNULL,
             start_new_session=True,
         )
+        if vlc_log:
+            vlc_log.close()
         _vlc_fullscreen = fullscreen
     threading.Thread(target=_focus_vlc_after_play, args=(play_id,), daemon=True).start()
 

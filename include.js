@@ -1810,7 +1810,7 @@ function init_navigation() {
       ['↑ ↓', short ? 'Nav' : 'Navigate'],
       ['←', short ? 'Side' : 'Sidebar'],
       ['→', 'Channel list'],
-      ['Enter', 'Play']
+      [short ? 'Ent' : 'Enter', 'Play']
     ];
     const kbEl = document.createElement('div');
     kbEl.className = 'nav_keybinds';

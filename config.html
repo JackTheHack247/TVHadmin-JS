@@ -37,7 +37,7 @@
   }
 
   function reset_defaults() {
-    if (confirm('Reset all settings back to factory defaults?')) {
+    if (confirm('Reset all settings?')) {
       localStorage.removeItem('TVHadmin');
       sessionStorage.clear();
       location.reload();
@@ -67,29 +67,29 @@
         <form action="config.html" method="post" name="FormName" id="myForm">
           <table class="config-list">
             <tr class="row_alt" id="tvh-url-row">
-              <td class="col_label">TVHeadend Server URL</td>
+              <td class="col_label">TV server address</td>
               <td class="col_value"><input type="text" name="TVH_URL" placeholder="http://your.server:9981"></td>
             </tr>
             <tr class="row_alt" id="stream-prof-row">
-              <td class="col_label">Stream Profile</td>
+              <td class="col_label">Stream type</td>
               <td class="col_value" id="stream-prof"></td>
             </tr>
             <tr class="row_alt">
-              <td class="col_label">Preview player</td>
+              <td class="col_label">Play TV in</td>
               <td class="col_value">
                 <select name="PREVIEW_PLAYER">
-                  <option value="external">External VLC app (recommended on Pi)</option>
-                  <option value="html5">HTML5 video in browser</option>
-                  <option value="vlc">VLC browser plugin (legacy NPAPI)</option>
-                  <option value="auto">Auto (plugin if detected, else HTML5)</option>
+                  <option value="external">VLC app (best)</option>
+                  <option value="html5">This browser</option>
+                  <option value="vlc">VLC plug-in (old)</option>
+                  <option value="auto">Automatic</option>
                 </select>
               </td>
             </tr>
             <tr class="row_alt">
-              <td class="col_label">VLC Python helper</td>
+              <td class="col_label">VLC helper</td>
               <td class="col_value">
                 <input type="checkbox" name="VLC_HELPER" value="1" checked>
-                <span class="config-inline-hint">On the Pi run <code>sh scripts/install-tvhadmin-vlc-app.sh</code> once, then start <b>TVHadmin VLC</b> from the menu (or <code>start-vlc-helper.sh</code>). The app window shows each <b>Backspace</b> press. Needs <code>python3-tk python3-evdev wmctrl xdotool</code>; add user to group <code>input</code>.</span>
+                <span class="config-inline-hint">Keep on. Lets the remote control VLC.</span>
               </td>
             </tr>
             <tr class="row_alt">
@@ -97,30 +97,30 @@
               <td class="col_value"><input type="text" name="VLC_HELPER_PORT" size="6" placeholder="8765"></td>
             </tr>
             <tr class="row_alt">
-              <td class="col_label">VLC fullscreen</td>
+              <td class="col_label">Full screen</td>
               <td class="col_value">
                 <input type="checkbox" name="VLC_FULLSCREEN" value="1" checked>
-                <span class="config-inline-hint">Uncheck if fullscreen VLC hides the browser and you cannot open the menu (VLC plays in a window instead).</span>
+                <span class="config-inline-hint">Turn off if you can't get back to the menu.</span>
               </td>
             </tr>
             <tr class="row_alt">
-              <td class="col_label">Close VLC on menu</td>
+              <td class="col_label">Stop TV on menu</td>
               <td class="col_value">
                 <input type="checkbox" name="VLC_STOP_ON_MENU" value="1">
-                <span class="config-inline-hint">If checked, opening the menu stops VLC. Otherwise the helper tries to raise the browser (<code>sudo apt install wmctrl</code> on the Pi).</span>
+                <span class="config-inline-hint">Stops the picture when you open the menu.</span>
               </td>
             </tr>
             <tr class="row_alt" id="prof-row" style="display:none">
-              <td class="col_label">Recording Profile</td>
+              <td class="col_label">Recording type</td>
               <td class="col_value" id="prof"></td>
             </tr>
             <tr class="row_alt">
               <td class="col_label">Screen</td>
               <td class="col_value">
                 <select name="SCREEN">
-                  <option value="ext">External screen (TV / monitor)</option>
-                  <option value="onboard">Onboard screen (small 320×240)</option>
-                  <option value="auto">Auto (onboard when the screen is small)</option>
+                  <option value="ext">TV / monitor</option>
+                  <option value="onboard">Small built-in screen</option>
+                  <option value="auto">Automatic</option>
                 </select>
               </td>
             </tr>
@@ -135,18 +135,18 @@
               </td>
             </tr>
             <tr class="row_alt">
-              <td class="col_label">Home Page</td>
+              <td class="col_label">Start page</td>
               <td class="col_value">
                 <select name="HOME">
-                  <option value="now">Whats On Now</option>
-                  <option value="timeline">TimeLine</option>
-                  <option value="recordings">Record</option>
+                  <option value="now">What's On Now</option>
+                  <option value="timeline">Timeline</option>
+                  <option value="recordings">Recordings</option>
                   <option value="config">Config</option>
                 </select>
               </td>
             </tr>
             <tr class="row_alt">
-              <td class="col_label">Timeline Length</td>
+              <td class="col_label">Guide length</td>
               <td class="col_value">
                 <select name="TIMESPAN">
                   <option value="2">2 hours</option>
@@ -156,7 +156,7 @@
               </td>
             </tr>
             <tr class="row_alt">
-              <td class="col_label">Auto Refresh</td>
+              <td class="col_label">Auto update</td>
               <td class="col_value"><input type="checkbox" name="REFR" value="1"></td>
             </tr>
           </table>
@@ -190,7 +190,7 @@ async function main() {
 
   let streamProfiles = await get_stream_profiles();
   var sp = "<select name='SUUID'>";
-  sp += "<option value=''" + (!cookies.SUUID ? " selected" : "") + ">Auto (browser-friendly)</option>";
+  sp += "<option value=''" + (!cookies.SUUID ? " selected" : "") + ">Automatic (best)</option>";
   const seen = {};
   for (const p of streamProfiles) {
     if (!p.val || seen[p.val]) continue;
@@ -202,21 +202,9 @@ async function main() {
   document.getElementById("stream-prof").innerHTML = sp;
   const hint = document.createElement('div');
   hint.className = 'stream-prof-hint';
-  const available = streamProfiles.map(function(p) { return p.val; }).filter(Boolean);
-  const best = (typeof best_browser_stream_profile_hint === 'function') ? best_browser_stream_profile_hint() : 'webtv-h264-vorbis-mp4';
-  if (available.indexOf('webtv-h264-aac-mp4') === -1) {
-    hint.textContent = 'webtv-h264-aac-mp4 is not on your server. Use Auto or pick ' + best + '. To add MP4: TVHeadend → Configuration → Stream → Stream profiles → Add → Transcode/av-lib, container mp4, video h264, audio aac, name webtv-h264-aac-mp4.';
-  } else {
-    hint.textContent = 'Recommended for this browser: webtv-h264-aac-mp4 (or Auto).';
-  }
+  hint.textContent = 'Leave on Automatic unless channels won\'t play.';
   document.getElementById("stream-prof").appendChild(hint);
   document.getElementById("stream-prof-row").style.display = '';
-
-  const previewHint = document.createElement('div');
-  previewHint.className = 'stream-prof-hint';
-  previewHint.textContent = 'External VLC: start scripts/start-vlc-helper.sh on the Pi, enable VLC Python helper below, Save. Play runs VLC fullscreen via Python (fallback: .m3u download). Use stream profile pass.';
-  const previewRow = document.querySelector('select[name="PREVIEW_PLAYER"]');
-  if (previewRow && previewRow.parentNode) previewRow.parentNode.appendChild(previewHint);
 
   reloadForm(form, cookies);
 
@@ -224,7 +212,7 @@ async function main() {
     const urlRow = document.getElementById('tvh-url-row');
     if (urlRow) {
       urlRow.querySelector('.col_value').innerHTML =
-        'Connected via TVHeadend (same server — leave URL blank when served from /static/)';
+        'Connected';
     }
   }
 
