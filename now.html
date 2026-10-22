@@ -169,6 +169,13 @@
       row.innerHTML = s;
       i++;
     }
+    if (first && i === 0) {
+      var empty = table.insertRow(-1);
+      empty.className = 'row_alt';
+      empty.innerHTML = "<td class='col_title' colspan='5'>" +
+        (get_epg_kind() === 'radio' ? 'No radio stations found' : 'No channels found') +
+        '</td>';
+    }
     sync_whatson_row_lines();
     updateTimeline()
   }
@@ -202,6 +209,7 @@
         <table>
           <tr>
 	    <td class='col_title'><div id='mobmenu'>&#9776;</div> <h1>What's On Now</h1></td>
+	    <td id='epgkind'></td>
 	    <td id='mediatags'></td>
 	  </tr>
         </table>
@@ -234,8 +242,10 @@
   async function main() {
     lcn = 0;
     if (cookies.CSORT == "1") lcn = 1;
+    if (get_epg_kind() === 'radio') await ensure_radio_channels();
     [ tags, channels ] = await Promise.all([get_channeltags(), get_channels(lcn)]);
     media = build_media_filter('Now_', tags);
+    document.getElementById("epgkind").innerHTML = build_kind_toggle();
     document.getElementById("mediatags").innerHTML = build_tag_checkboxes('Now_');
 
     update(1);

@@ -176,6 +176,7 @@
         <table>
           <tr>
 	    <td class='col_title'><div id='mobmenu'>&#9776;</div> <h1>Timeline</h1></td>
+	    <td id='epgkind'></td>
 	    <td id='mediatags'></td>
 	  </tr>
         </table>
@@ -209,8 +210,10 @@
   var cookies = get_cookies();
 
   async function main() {
+    if (get_epg_kind() === 'radio') await ensure_radio_channels();
     var tags = await get_channeltags();
     media = build_media_filter('Tim_', tags);
+    document.getElementById("epgkind").innerHTML = build_kind_toggle();
     document.getElementById("mediatags").innerHTML = build_tag_checkboxes('Tim_');
 
     textent = 14400;

@@ -505,6 +505,9 @@ function init_preview_persist() {
 
 var channel_info_cache = {};
 var radio_tag_ids = [];
+var radio_service_ids = {};
+// DVB service types for radio: 0x02 digital radio, 0x07 FM radio, 0x0A advanced codec radio
+var RADIO_SERVICE_TYPES = [0x02, 0x07, 0x0A];
 
 function cache_channels(list) {
   if (!list) return;
@@ -514,7 +517,16 @@ function cache_channels(list) {
 }
 
 async function load_radio_tag_ids() {
-  const tags = await fetch_json('/api/channeltag/list');
+  const [tags, services] = await Promise.all([
+    fetch_json('/api/channeltag/list'),
+    fetch_json('/api/mpegts/service/grid?limit=9999')
+  ]);
+  if (services && services.entries) {
+    radio_service_ids = {};
+    services.entries.forEach(function(s) {
+      if (RADIO_SERVICE_TYPES.indexOf(Number(s.dvb_servicetype)) >= 0) radio_service_ids[s.uuid] = true;
+    });
+  }
   if (!tags || !tags.entries) return;
   radio_tag_ids = tags.entries.filter(function(tag) {
     return /\bradio\b/i.test(tag.val || '');
@@ -525,6 +537,7 @@ async function load_radio_tag_ids() {
 
 function channel_is_radio(ch) {
   if (!ch) return false;
+  if (ch.services && ch.services.some(function(s) { return radio_service_ids[s]; })) return true;
   if (/\bradio\b|\bfm\b|\bdab\b/i.test(ch.name || '')) return true;
   if (ch.tags && radio_tag_ids.length) {
     for (let i = 0; i < ch.tags.length; i++) {
@@ -537,6 +550,64 @@ function channel_is_radio(ch) {
 function is_radio_channel(name, uuid) {
   if (uuid && channel_info_cache[uuid]) return channel_is_radio(channel_info_cache[uuid]);
   return /\bradio\b|\bfm\b|\bdab\b|bbc sounds/i.test(name || '');
+}
+
+function get_epg_kind() {
+  return sessionStorage.getItem('epg_kind') === 'radio' ? 'radio' : 'tv';
+}
+
+function set_epg_kind(kind) {
+  sessionStorage.setItem('epg_kind', kind === 'radio' ? 'radio' : 'tv');
+  location.reload();
+}
+
+function channel_matches_kind(ch) {
+  var radio = channel_is_radio(ch);
+  return get_epg_kind() === 'radio' ? radio : !radio;
+}
+
+function build_kind_toggle() {
+  var kind = get_epg_kind();
+  return '<div class="epg-kind">' +
+    '<button type="button" class="epg-kind-btn' + (kind === 'tv' ? ' content-selected' : '') + '" onclick="set_epg_kind(\'tv\')">TV</button>' +
+    '<button type="button" class="epg-kind-btn' + (kind === 'radio' ? ' content-selected' : '') + '" onclick="set_epg_kind(\'radio\')">Radio</button>' +
+    '</div>';
+}
+
+function service_is_mapped(s) {
+  if (!s) return false;
+  if (s.mapped) return true;
+  var ch = s.channel;
+  if (!ch) return false;
+  if (Array.isArray(ch)) return ch.length > 0;
+  if (typeof ch === 'string') return ch.length > 0;
+  return true;
+}
+
+async function ensure_radio_channels() {
+  const json = await fetch_json('/api/mpegts/service/grid?limit=9999');
+  if (!json || !json.entries) return 0;
+  const unmapped = json.entries.filter(function(s) {
+    if (s.enabled === false) return false;
+    if (RADIO_SERVICE_TYPES.indexOf(Number(s.dvb_servicetype)) < 0) return false;
+    if (s.encrypted) return false;
+    return !service_is_mapped(s);
+  });
+  var created = 0;
+  for (var i = 0; i < unmapped.length; i++) {
+    var s = unmapped[i];
+    var conf = { enabled: true, name: s.svcname || s.name || 'Radio', services: [s.uuid] };
+    if (radio_tag_ids.length) conf.tags = [radio_tag_ids[0]];
+    try {
+      const response = await fetch(api_url('/api/idnode/create'), Object.assign({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'class=channel&conf=' + encodeURIComponent(JSON.stringify(conf))
+      }, fetch_opts()));
+      if (response.ok) created++;
+    } catch (e) {}
+  }
+  return created;
 }
 
 function should_use_radio_layout(forceRadio) {
@@ -2644,6 +2715,7 @@ function intersect(tags, media) {
 }
 
 function channel_visible(c, media) {
+  if (!channel_matches_kind(c)) return false;
   if (!media || media.All) return true;
   if (!Object.keys(media).length) return true;
   return intersect(c.tags, media) > 0;

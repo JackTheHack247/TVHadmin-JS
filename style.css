@@ -881,6 +881,28 @@ a:hover {
 	font-weight: normal;
 }
 
+.epg-kind {
+	display: inline-block;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.epg-kind-btn {
+	min-width: 0;
+	padding: 0.3vh 0.6vw;
+	margin: 0 2px 0 0;
+	border: 2px solid var(--wb-border);
+	background: var(--wb-panel);
+	color: var(--wb-text);
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.epg-kind-btn.content-selected {
+	background: var(--wb-active);
+	color: var(--wb-text-light);
+}
+
 /* What's On Now */
 #whatson .list {
 	border: none;
