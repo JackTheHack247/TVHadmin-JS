@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "15"
+VERSION = "16"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -698,7 +698,7 @@ def _evdev_hotkey_loop():
         try:
             dev = evdev.InputDevice(path)
             keys = dev.capabilities().get(ecodes.EV_KEY, [])
-            if ecodes.KEY_BACKSPACE in keys:
+            if ecodes.KEY_BACKSPACE in keys or ecodes.KEY_UP in keys:
                 devices.append(dev)
         except OSError:
             continue
@@ -720,12 +720,22 @@ def _evdev_hotkey_loop():
         for dev in ready:
             try:
                 for event in dev.read():
-                    if (
-                        event.type == ecodes.EV_KEY
-                        and event.value == 1
-                        and event.code == ecodes.KEY_BACKSPACE
-                    ):
+                    if event.type != ecodes.EV_KEY or event.value != 1:
+                        continue
+                    if event.code == ecodes.KEY_BACKSPACE:
                         on_backspace(event.timestamp())
+                        continue
+                    if _tv_ui_mode != "video" or _play_backend:
+                        continue
+                    arrows = {
+                        ecodes.KEY_UP: "ArrowUp",
+                        ecodes.KEY_DOWN: "ArrowDown",
+                        ecodes.KEY_LEFT: "ArrowLeft",
+                        ecodes.KEY_RIGHT: "ArrowRight",
+                    }
+                    action = arrows.get(event.code)
+                    if action:
+                        set_hotkey_action(action)
             except (OSError, BlockingIOError):
                 continue
 
@@ -843,6 +853,18 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/browser-fullscreen":
             threading.Thread(target=browser_fullscreen, daemon=True).start()
             self._json(200, {"ok": True})
+            return
+        if path == "/seek":
+            secs = 30.0
+            try:
+                secs = float(qs.get("secs", ["30"])[0])
+            except (TypeError, ValueError):
+                secs = 30.0
+            if _play_backend and hasattr(_play_backend, "seek"):
+                _play_backend.seek(secs)
+                self._json(200, {"ok": True})
+                return
+            self._json(200, {"ok": False, "error": "no player"})
             return
         if path == "/hotkey-pending":
             self._json(200, {"ok": True, "action": consume_hotkey_action()})

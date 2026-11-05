@@ -1801,6 +1801,10 @@ function init_vlc_hotkey_poll() {
         if (!data || !data.action) return;
         if (data.action === 'menu') enter_external_tv_menu_mode();
         else if (data.action === 'video') enter_external_tv_video_mode();
+        else if (data.action === 'ArrowUp' || data.action === 'ArrowDown' ||
+                 data.action === 'ArrowLeft' || data.action === 'ArrowRight') {
+          handle_watch_key(data.action);
+        }
       })
       .catch(function() {});
   }, 350);
@@ -1961,6 +1965,89 @@ async function preview_channel(uuid, name) {
   }
   play_preview(video, name, url, 0, uuid);
 }
+
+var _zap_busy = false;
+
+function is_watch_mode() {
+  if (menu_focus) return false;
+  if (is_menu_overlay_open()) return false;
+  return sessionStorage.getItem('external_tv_mode') === 'video';
+}
+
+function watching_recording() {
+  return sessionStorage.getItem('preview_type') === 'recording';
+}
+
+function zap_channel_list() {
+  var list = [];
+  Object.keys(channel_info_cache).forEach(function(uuid) {
+    var ch = channel_info_cache[uuid];
+    if (ch && ch.uuid) list.push(ch);
+  });
+  list.sort(function(a, b) {
+    var an = Number(a.number) || 0;
+    var bn = Number(b.number) || 0;
+    if (an && bn && an !== bn) return an - bn;
+    return strcasecmp(a, b);
+  });
+  return list;
+}
+
+async function zap_watch_channel(delta) {
+  if (_zap_busy) return;
+  _zap_busy = true;
+  setTimeout(function() { _zap_busy = false; }, 450);
+  var list = zap_channel_list();
+  if (!list.length) {
+    try { list = await get_channels(cookies.CSORT || 0); } catch (e) { list = []; }
+  }
+  if (!list.length) return;
+  var cur = sessionStorage.getItem('preview_uuid');
+  var idx = 0;
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].uuid === cur) {
+      idx = i;
+      break;
+    }
+  }
+  var next = list[(idx + delta + list.length * 10) % list.length];
+  if (!next || next.uuid === cur) return;
+  var name = next.number ? (next.number + ' ' + next.name) : next.name;
+  preview_channel(next.uuid, name);
+}
+
+function seek_watch(seconds) {
+  var video = document.getElementById('live-preview');
+  if (video && video.readyState > 0 && video.seekable && video.seekable.length) {
+    var t = (video.currentTime || 0) + seconds;
+    if (t < 0) t = 0;
+    if (isFinite(video.duration) && video.duration > 0 && t > video.duration) t = video.duration - 0.5;
+    video.currentTime = t;
+    return;
+  }
+  var helper = vlc_helper_base();
+  if (!helper) return;
+  fetch(helper + '/seek?secs=' + encodeURIComponent(String(seconds)), {
+    method: 'GET', mode: 'cors', cache: 'no-store'
+  }).catch(function() {});
+}
+
+function handle_watch_key(key) {
+  if (!key) return false;
+  if (watching_recording()) {
+    if (key === 'ArrowLeft') { seek_watch(-30); return true; }
+    if (key === 'ArrowRight') { seek_watch(30); return true; }
+    if (key === 'ArrowUp') { seek_watch(60); return true; }
+    if (key === 'ArrowDown') { seek_watch(-60); return true; }
+    return false;
+  }
+  if (key === 'ArrowUp' || key === 'ArrowLeft') { void zap_watch_channel(-1); return true; }
+  if (key === 'ArrowDown' || key === 'ArrowRight') { void zap_watch_channel(1); return true; }
+  return false;
+}
+
+window.zap_watch_channel = zap_watch_channel;
+window.handle_watch_key = handle_watch_key;
 
 function play_recording(uuid, title) {
   if (preview_player_mode() === 'external') {
@@ -2385,6 +2472,13 @@ function init_menu_keyboard() {
 
   document.addEventListener('keydown', function(e) {
     if (handle_menu_overlay_keydown(e)) return;
+
+    if (is_watch_mode() && (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+        e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      handle_watch_key(e.key);
+      return;
+    }
 
     if (external_tv_uses_sidebar_menu() && (e.key === 'Backspace' || e.keyCode === 8)) {
       if (!e.target.matches('input, textarea, select')) {

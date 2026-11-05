@@ -106,6 +106,9 @@ class PlayBackend(object):
         with self._lock:
             self._playing = bool(value)
 
+    def seek(self, seconds):
+        self.app.idle(self.app.seek_media, seconds)
+
 
 class PlayerApp(object):
     def __init__(self, helper, port):
@@ -122,6 +125,7 @@ class PlayerApp(object):
         self.player = None
         self.instance = None
         self._xid_ready = False
+        self._is_recording = False
         self._show_cursor = "--show-cursor" in sys.argv
 
         self.window = Gtk.Window(title="TVHadmin")
@@ -334,10 +338,38 @@ python3 scripts/tvhadmin_player.py</pre>
             media.add_option(":effect-list=spectrum")
         self.player.set_media(media)
         self._bind_window()
+        self._is_recording = "dvrfile" in (url or "").lower() or "/dvr/" in (url or "").lower()
         self.backend.set_playing(True)
         self.show_video()
         self.player.play()
         self.helper.log_event("Playing%s: %s" % (" (radio)" if radio else "", title or url[:80]))
+
+    def seek_media(self, seconds):
+        if not self.player:
+            return False
+        try:
+            length = self.player.get_length()
+            t = self.player.get_time()
+            if t < 0:
+                t = 0
+            nt = int(t + float(seconds) * 1000)
+            if length > 0:
+                nt = max(0, min(nt, max(0, length - 500)))
+            else:
+                nt = max(0, nt)
+            self.player.set_time(nt)
+        except Exception as exc:
+            self.helper.log_event("Seek failed: %s" % exc)
+        return False
+
+    def _run_js(self, code):
+        try:
+            self.webview.run_javascript(code, None, None, None)
+        except TypeError:
+            try:
+                self.webview.run_javascript(code)
+            except Exception:
+                pass
 
     def stop_media(self):
         if self.player:
@@ -371,16 +403,37 @@ python3 scripts/tvhadmin_player.py</pre>
 
     def _on_key(self, widget, event):
         key = event.keyval
-        if key in (self.Gdk.KEY_Escape, self.Gdk.KEY_BackSpace):
+        Gdk = self.Gdk
+        if key in (Gdk.KEY_Escape, Gdk.KEY_BackSpace):
             self.helper.on_backspace()
             return True
-        if key == self.Gdk.KEY_F11:
+        if key == Gdk.KEY_F11:
             if self.window.is_fullscreen():
                 self.window.unfullscreen()
             else:
                 self.window.fullscreen()
             return True
-        return False
+        if self.stack.get_visible_child_name() != "video":
+            return False
+        arrows = {
+            Gdk.KEY_Up: "ArrowUp",
+            Gdk.KEY_KP_Up: "ArrowUp",
+            Gdk.KEY_Down: "ArrowDown",
+            Gdk.KEY_KP_Down: "ArrowDown",
+            Gdk.KEY_Left: "ArrowLeft",
+            Gdk.KEY_KP_Left: "ArrowLeft",
+            Gdk.KEY_Right: "ArrowRight",
+            Gdk.KEY_KP_Right: "ArrowRight",
+        }
+        name = arrows.get(key)
+        if not name:
+            return False
+        if self._is_recording:
+            secs = {"ArrowLeft": -30, "ArrowRight": 30, "ArrowUp": 60, "ArrowDown": -60}[name]
+            self.seek_media(secs)
+        else:
+            self._run_js("handle_watch_key('%s')" % name)
+        return True
 
     def _on_quit(self, *args):
         try:
