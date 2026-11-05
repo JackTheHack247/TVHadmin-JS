@@ -72,9 +72,6 @@ function is_onboard_screen() {
 
 if (is_onboard_screen()) {
   document.documentElement.classList.add('screen-onboard');
-  if (!window.TVH_PLAYER && Math.min(screen.width || 0, window.innerWidth || 0) >= 640) {
-    document.documentElement.classList.add('screen-640');
-  }
   var pageName = (location.pathname.split('/').pop() || 'TVHadmin.html').replace(/^_prev_/, '').replace(/\.html?$/i, '');
   document.documentElement.classList.add('page-' + pageName.toLowerCase());
   var onboardLink = document.createElement('link');
@@ -82,7 +79,7 @@ if (is_onboard_screen()) {
   onboardLink.type = 'text/css';
   onboardLink.href = 'onboard.css';
   document.head.appendChild(onboardLink);
-  WHATSON_TITLE_MAX_CHARS = 18;
+  WHATSON_TITLE_MAX_CHARS = 36;
   document.addEventListener('DOMContentLoaded', init_onboard_extras);
 }
 
@@ -1861,7 +1858,7 @@ function init_navigation() {
     const keybinds = [
       ['↑ ↓', short ? 'Nav' : 'Navigate'],
       ['←', short ? 'Side' : 'Sidebar'],
-      ['→', 'Channel list'],
+      ['→', short ? 'List' : 'Channel list'],
       [short ? 'Ent' : 'Enter', 'Play']
     ];
     const kbEl = document.createElement('div');

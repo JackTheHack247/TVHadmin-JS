@@ -25,7 +25,6 @@ DEFAULT_TVH = os.environ.get("TVHADMIN_TVH", "http://127.0.0.1:9981")
 START_PAGE = os.environ.get("TVHADMIN_PAGE", "now.html")
 MENU_W = 640
 MENU_H = 480
-MENU_ZOOM = 2.0  # onboard layout is 320x240; 2x fills 640x480 sharply
 
 ONBOARD_BOOTSTRAP = """
 (function() {
@@ -163,7 +162,7 @@ class PlayerApp(object):
             self.webview = WebKit2.WebView()
         self.webview.set_size_request(MENU_W, MENU_H)
         try:
-            self.webview.set_zoom_level(MENU_ZOOM)
+            self.webview.set_zoom_level(1.0)
         except Exception:
             pass
         settings = self.webview.get_settings()
