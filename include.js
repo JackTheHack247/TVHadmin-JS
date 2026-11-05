@@ -99,7 +99,7 @@ function clip_onboard_recording_rows() {
   var timeCell = rows[0].querySelector('.col_time');
   var timeW = timeCell ? timeCell.offsetWidth : 72;
   var actionW = 12;
-  var minNameW = measure_onboard_text('MMMMMMMMMM', ref) + pad;
+  var minNameW = measure_onboard_text('MMMMMMMMM', ref) + pad;
   var tableW = table.clientWidth;
   var nameW = tableW - dateW - timeW - chanW - actionW;
   if (nameW < minNameW) {
@@ -121,7 +121,7 @@ function clip_onboard_recording_rows() {
   });
 
   rows.forEach(function(row) {
-    clip_onboard_text(row.querySelector('.col_name .epg_title'), 10);
+    clip_onboard_text(row.querySelector('.col_name .epg_title'), 9);
   });
 }
 
