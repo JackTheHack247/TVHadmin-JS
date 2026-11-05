@@ -4,11 +4,13 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 PORT=8765
 RESTART=0
 CONSOLE=0
+PLAYER=0
 
 for arg in "$@"; do
   case "$arg" in
     --restart) RESTART=1 ;;
     --console) CONSOLE=1 ;;
+    --player|--app) PLAYER=1 ;;
     [0-9]*) PORT="$arg" ;;
   esac
 done
@@ -18,6 +20,7 @@ BASE="http://127.0.0.1:$PORT"
 if [ "$RESTART" = 1 ]; then
   pkill -f tvhadmin_vlc_app.py 2>/dev/null || true
   pkill -f tvhadmin_vlc_helper.py 2>/dev/null || true
+  pkill -f tvhadmin_player.py 2>/dev/null || true
   sleep 0.6
 fi
 
@@ -41,6 +44,10 @@ fi
 if [ "$CONSOLE" = 1 ]; then
   export TVHADMIN_LOG_STDERR=1
   exec python3 "$DIR/tvhadmin_vlc_helper.py" "$PORT"
+fi
+
+if [ "$PLAYER" = 1 ]; then
+  exec python3 "$DIR/tvhadmin_player.py" "$PORT"
 fi
 
 if python3 -c "import tkinter" 2>/dev/null; then

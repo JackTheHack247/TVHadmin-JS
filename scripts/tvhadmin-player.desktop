@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=TVHadmin
+Comment=Watch TV — menus and VLC in one app
+Exec=python3 /usr/share/tvheadend/src/webui/static/TVHadmin-JS/scripts/tvhadmin_player.py
+Path=/usr/share/tvheadend/src/webui/static/TVHadmin-JS/scripts
+Icon=applications-multimedia
+Terminal=false
+Categories=AudioVideo;Player;
+StartupNotify=true

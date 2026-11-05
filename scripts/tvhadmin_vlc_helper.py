@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "14"
+VERSION = "15"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -163,6 +163,8 @@ def vlc_window_ids():
 
 
 def vlc_window_exists():
+    if _play_backend and _play_backend.is_playing():
+        return True
     if vlc_window_ids():
         return True
     return _ok(["pgrep", "-x", "vlc"])
@@ -490,6 +492,9 @@ _launch_lock = threading.Lock()
 def stop_vlc():
     """Close VLC completely and wait until it has gone."""
     global _vlc_proc
+    if _play_backend:
+        _play_backend.stop()
+        return
     proc, _vlc_proc = _vlc_proc, None
     if proc and proc.poll() is None:
         proc.terminate()
@@ -541,10 +546,22 @@ def _open_vlc_log(cmd):
         return None
 
 
+_play_backend = None
+
+
+def set_play_backend(backend):
+    """Optional in-process player: play/stop/show_menu/show_video/is_playing."""
+    global _play_backend
+    _play_backend = backend
+
+
 def launch_vlc(url, title=None, fullscreen=True, small_screen=False, radio=False):
-    """Start a brand-new VLC for every channel (no --one-instance), so it always
-    opens in front and fullscreen."""
+    """Start playback: built-in libVLC when the player app is running, else a VLC window."""
     global _play_counter, _vlc_proc, _vlc_fullscreen
+    if _play_backend:
+        set_tv_ui_mode("video")
+        _play_backend.play(url, title, fullscreen, small_screen, radio)
+        return
     with _launch_lock:
         _play_counter += 1
         play_id = _play_counter
@@ -616,6 +633,18 @@ def set_tv_ui_mode(mode):
 def _do_toggle():
     global _tv_ui_mode, _busy
     try:
+        if _play_backend:
+            if _tv_ui_mode == "menu" and _play_backend.is_playing():
+                _tv_ui_mode = "video"
+                _play_backend.show_video()
+                set_hotkey_action("video")
+                log_event("Backspace -> video")
+            else:
+                _tv_ui_mode = "menu"
+                _play_backend.show_menu()
+                set_hotkey_action("menu")
+                log_event("Backspace -> menu")
+            return
         if _tv_ui_mode == "menu" and vlc_window_exists():
             _tv_ui_mode = "video"
             ok = restore_vlc_video()
@@ -732,6 +761,9 @@ def environment_report():
             log_event("WARNING: user not in group 'input' -> sudo usermod -aG input $USER, then reboot")
     except KeyError:
         pass
+    if _play_backend:
+        log_event("Built-in player: menus and VLC run in this app (Pale Moon not needed)")
+        return
     if have("wmctrl") and not is_wayland():
         if find_browser_window():
             log_event("Found Pale Moon window: OK")
