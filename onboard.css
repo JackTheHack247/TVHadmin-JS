@@ -84,6 +84,23 @@ html.screen-onboard table {
 	max-width: 100%;
 }
 
+/* 640x480 is 2x the 320x240 layout, so the pixel font stays sharp */
+html.screen-onboard.screen-640,
+html.screen-onboard.screen-640 body {
+	width: 320px !important;
+	height: 240px !important;
+	overflow: hidden !important;
+}
+
+html.screen-onboard.screen-640 #container {
+	width: 320px !important;
+	height: 240px !important;
+	transform: scale(2);
+	-moz-transform: scale(2);
+	transform-origin: 0 0;
+	-moz-transform-origin: 0 0;
+}
+
 html.screen-onboard #container {
 	width: 100vw !important;
 	height: 100vh !important;

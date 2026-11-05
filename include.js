@@ -67,11 +67,14 @@ else link.href = 'style.css';
 document.head.appendChild(link);
 function is_onboard_screen() {
   if (cookies.SCREEN === 'onboard') return true;
-  return cookies.SCREEN === 'auto' && Math.max(screen.width, screen.height) <= 480;
+  return cookies.SCREEN === 'auto' && Math.max(screen.width, screen.height) <= 640;
 }
 
 if (is_onboard_screen()) {
   document.documentElement.classList.add('screen-onboard');
+  if (!window.TVH_PLAYER && Math.min(screen.width || 0, window.innerWidth || 0) >= 640) {
+    document.documentElement.classList.add('screen-640');
+  }
   var pageName = (location.pathname.split('/').pop() || 'TVHadmin.html').replace(/^_prev_/, '').replace(/\.html?$/i, '');
   document.documentElement.classList.add('page-' + pageName.toLowerCase());
   var onboardLink = document.createElement('link');

@@ -23,6 +23,23 @@ if DIR not in sys.path:
 
 DEFAULT_TVH = os.environ.get("TVHADMIN_TVH", "http://127.0.0.1:9981")
 START_PAGE = os.environ.get("TVHADMIN_PAGE", "now.html")
+MENU_W = 640
+MENU_H = 480
+MENU_ZOOM = 2.0  # onboard layout is 320x240; 2x fills 640x480 sharply
+
+ONBOARD_BOOTSTRAP = """
+(function() {
+  window.TVH_PLAYER = 1;
+  var c = {};
+  try {
+    c = JSON.parse(decodeURIComponent(localStorage.getItem('TVHadmin') || '%7B%7D'));
+  } catch (e) {}
+  c.SCREEN = 'onboard';
+  c.PREVIEW_PLAYER = 'external';
+  c.VLC_HELPER = '1';
+  localStorage.setItem('TVHadmin', encodeURIComponent(JSON.stringify(c)));
+})();
+"""
 
 
 def load_gtk():
@@ -106,17 +123,49 @@ class PlayerApp(object):
         self.player = None
         self.instance = None
         self._xid_ready = False
+        self._show_cursor = "--show-cursor" in sys.argv
 
         self.window = Gtk.Window(title="TVHadmin")
         self.window.set_wmclass("tvhadmin", "TVHadmin")
+        self.window.set_default_size(MENU_W, MENU_H)
+        try:
+            self.window.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0, 0, 0, 1))
+        except Exception:
+            pass
         self.window.connect("destroy", self._on_quit)
         self.window.connect("key-press-event", self._on_key)
+        self.window.connect("realize", self._hide_cursor)
 
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.NONE)
-        self.window.add(self.stack)
+        self.stack.set_size_request(MENU_W, MENU_H)
+        holder = Gtk.Box()
+        holder.set_halign(Gtk.Align.CENTER)
+        holder.set_valign(Gtk.Align.CENTER)
+        holder.pack_start(self.stack, False, False, 0)
+        self.window.add(holder)
 
-        self.webview = WebKit2.WebView()
+        ucm = WebKit2.UserContentManager()
+        try:
+            script = WebKit2.UserScript.new(
+                ONBOARD_BOOTSTRAP,
+                WebKit2.UserContentInjectedFrames.ALL_FRAMES,
+                WebKit2.UserScriptInjectionTime.START,
+                None,
+                None,
+            )
+            ucm.add_script(script)
+        except Exception:
+            pass
+        try:
+            self.webview = WebKit2.WebView.new_with_user_content_manager(ucm)
+        except TypeError:
+            self.webview = WebKit2.WebView()
+        self.webview.set_size_request(MENU_W, MENU_H)
+        try:
+            self.webview.set_zoom_level(MENU_ZOOM)
+        except Exception:
+            pass
         settings = self.webview.get_settings()
         settings.set_enable_javascript(True)
         try:
@@ -124,13 +173,17 @@ class PlayerApp(object):
         except AttributeError:
             pass
         self.webview.connect("context-menu", lambda *a: True)
+        self.webview.connect("load-failed", self._on_load_failed)
+        self.webview.connect("load-changed", self._on_load_changed)
         self.stack.add_named(self.webview, "menu")
 
         self.video = Gtk.DrawingArea()
+        self.video.set_size_request(MENU_W, MENU_H)
         self.video.set_hexpand(True)
         self.video.set_vexpand(True)
         self.video.connect("realize", self._on_video_realize)
         self.stack.add_named(self.video, "video")
+        self.GLib.timeout_add(800, self._hide_cursor)
 
         self._make_vlc()
         helper.set_play_backend(self.backend)
@@ -181,6 +234,50 @@ class PlayerApp(object):
     def _on_video_realize(self, widget):
         self._bind_window()
         self._xid_ready = True
+        self._hide_cursor()
+
+    def _blank_cursor(self):
+        if self._show_cursor:
+            return False
+        display = self.window.get_display()
+        cur = None
+        try:
+            cur = self.Gdk.Cursor.new_from_name(display, "none")
+        except Exception:
+            cur = None
+        if cur is None:
+            try:
+                cur = self.Gdk.Cursor.new_for_display(display, self.Gdk.CursorType.BLANK_CURSOR)
+            except Exception:
+                return False
+        for widget in (self.window, self.webview, self.video):
+            gdk_win = widget.get_window()
+            if gdk_win is not None:
+                gdk_win.set_cursor(cur)
+        return False
+
+    def _hide_cursor(self, *args):
+        self.GLib.idle_add(self._blank_cursor)
+        return False
+
+    def _on_load_changed(self, view, event):
+        if self._show_cursor:
+            return
+        if event != self.WebKit2.LoadEvent.FINISHED:
+            return
+        try:
+            view.run_javascript(
+                "document.documentElement.style.cursor='none';"
+                "var s=document.createElement('style');"
+                "s.textContent='html,body,*{cursor:none !important}';"
+                "document.documentElement.appendChild(s);",
+                None, None, None,
+            )
+        except TypeError:
+            view.run_javascript(
+                "document.documentElement.style.cursor='none';"
+            )
+        self._hide_cursor()
 
     def _bind_window(self):
         if not self.player:
@@ -204,6 +301,24 @@ class PlayerApp(object):
         self.webview.load_uri(url)
         self.show_menu()
         return False
+
+    def _on_load_failed(self, view, load_event, uri, error):
+        msg = error.message if error else "connection failed"
+        self.helper.log_event("Could not open %s (%s)" % (uri, msg))
+        html = """<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;background:#222;color:#eee">
+<h1>TVHeadend is not running</h1>
+<p>The player opened, but nothing is listening at <code>%s</code>.</p>
+<p>On the Pi, in a terminal:</p>
+<pre style="background:#111;padding:12px">sudo systemctl start tvheadend
+sudo systemctl status tvheadend</pre>
+<p>Then close this app and start it again.</p>
+<p>If TVHeadend is on another device:</p>
+<pre style="background:#111;padding:12px">export TVHADMIN_TVH=http://PI-IP-ADDRESS:9981
+python3 scripts/tvhadmin_player.py</pre>
+<p style="color:#888">Detail: %s</p>
+</body></html>""" % (uri, msg)
+        view.load_html(html, "about:blank")
+        return True
 
     def play_media(self, url, title, radio):
         if not self.player:
