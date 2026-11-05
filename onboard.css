@@ -22,7 +22,7 @@ html.screen-onboard {
 	--wb-logo-height: 110px;
 	--wb-onboard-logo-scale: 2;
 	--wb-onboard-logo-x: 0px;
-	--wb-onboard-logo-y: 6px;
+	--wb-onboard-logo-y: 3px;
 	--wb-nav-gap: 0px;
 	--wb-whatson-duration-width: 10%;
 	--wb-whatson-channel-width: 19%;
@@ -36,7 +36,7 @@ html.screen-onboard {
 	--wb-rec-channel-width: 0px;
 	--wb-rec-length-width: 0px;
 	--wb-rec-name-width: auto;
-	--wb-rec-action-width: 24px;
+	--wb-rec-action-width: 16px;
 }
 
 html.screen-onboard *,
@@ -523,8 +523,8 @@ html.screen-onboard.page-recordings #content #list .col_name .epg_title {
 html.screen-onboard.page-recordings #content #list .col_action {
 	width: var(--wb-rec-action-width) !important;
 	max-width: var(--wb-rec-action-width) !important;
-	padding: 2px 0 !important;
-	text-align: center;
+	padding: 0 2px 0 0 !important;
+	text-align: right;
 }
 
 html.screen-onboard.page-recordings #content .rec-delete-label {
