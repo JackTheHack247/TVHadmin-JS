@@ -520,7 +520,7 @@ html.screen-onboard.page-recordings #content #list .col_channel {
 }
 
 html.screen-onboard.page-recordings #content #list .col_name {
-	min-width: 15ch;
+	min-width: 10ch;
 	padding-right: 4px !important;
 }
 
