@@ -16,8 +16,8 @@ function escape_html_text(text) {
     .replace(/"/g, '&quot;');
 }
 
-function clip_onboard_text(el) {
-  if (!el) return;
+function restore_onboard_full_text(el) {
+  if (!el) return '';
   var full = el.getAttribute('data-full');
   if (full == null) {
     full = String(el.textContent || '').replace(/\s+/g, ' ').trim();
@@ -25,19 +25,95 @@ function clip_onboard_text(el) {
     if (full) el.setAttribute('title', full);
   }
   el.textContent = full;
+  return full;
+}
+
+function measure_onboard_text(text, refEl) {
+  var m = document.getElementById('tvh-text-measure');
+  if (!m) {
+    m = document.createElement('span');
+    m.id = 'tvh-text-measure';
+    m.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;pointer-events:none;';
+    document.body.appendChild(m);
+  }
+  if (refEl) {
+    var cs = getComputedStyle(refEl);
+    m.style.fontFamily = cs.fontFamily;
+    m.style.fontSize = cs.fontSize;
+    m.style.letterSpacing = cs.letterSpacing;
+  }
+  m.textContent = text || '';
+  return m.offsetWidth;
+}
+
+function clip_onboard_text(el, minChars) {
+  if (!el) return;
+  var full = restore_onboard_full_text(el);
+  if (!full) return;
   if (el.scrollWidth <= el.clientWidth + 1) return;
+  var min = Math.max(0, minChars || 0);
   var n = full.length;
-  while (n > 0) {
+  while (n > min) {
     el.textContent = full.slice(0, n) + '..';
     if (el.scrollWidth <= el.clientWidth + 1) return;
     n--;
   }
-  el.textContent = '..';
+  el.textContent = full.length > min ? full.slice(0, min) + '..' : full;
+}
+
+function set_rec_col_width(table, cls, px, lock) {
+  table.querySelectorAll('td.' + cls).forEach(function(td) {
+    td.style.width = px + 'px';
+    td.style.minWidth = px + 'px';
+    td.style.maxWidth = lock ? px + 'px' : '';
+  });
 }
 
 function clip_onboard_recording_rows() {
   if (!is_onboard_screen()) return;
-  document.querySelectorAll('#content #list tr.row_alt .col_channel .channel_name, #content #list tr.row_inprogress .col_channel .channel_name, #content #list tr.row_error .col_channel .channel_name, #content #list tr.row_alt .col_name .epg_title, #content #list tr.row_inprogress .col_name .epg_title, #content #list tr.row_error .col_name .epg_title').forEach(clip_onboard_text);
+  var table = document.getElementById('list');
+  if (!table) return;
+  var rows = table.querySelectorAll('tr.row_alt, tr.row_inprogress, tr.row_error');
+  if (!rows.length) return;
+
+  rows.forEach(function(row) {
+    restore_onboard_full_text(row.querySelector('.col_channel .channel_name'));
+    restore_onboard_full_text(row.querySelector('.col_name .epg_title'));
+  });
+
+  var ref = rows[0].querySelector('.col_name .epg_title') || rows[0];
+  var pad = 8;
+  var dateW = measure_onboard_text('00/00/00', ref) + pad;
+  var chanW = 0;
+  rows.forEach(function(row) {
+    var d = row.querySelector('.col_date');
+    var c = row.querySelector('.col_channel .channel_name');
+    if (d) dateW = Math.max(dateW, d.scrollWidth + pad);
+    if (c) chanW = Math.max(chanW, measure_onboard_text(c.getAttribute('data-full') || c.textContent, c) + pad);
+  });
+  var headChan = table.querySelector('tr.heading .col_channel');
+  if (headChan) chanW = Math.max(chanW, measure_onboard_text(headChan.textContent, ref) + pad);
+
+  var timeCell = rows[0].querySelector('.col_time');
+  var timeW = timeCell ? timeCell.offsetWidth : 72;
+  var actionW = 16;
+  var minNameW = measure_onboard_text('MMMMMMMMMM', ref) + pad;
+  var tableW = table.clientWidth;
+  var maxChan = tableW - dateW - timeW - actionW - minNameW;
+  if (maxChan < 48) maxChan = 48;
+  if (chanW > maxChan) chanW = maxChan;
+
+  set_rec_col_width(table, 'col_date', dateW, true);
+  set_rec_col_width(table, 'col_channel', chanW, true);
+  table.querySelectorAll('td.col_name').forEach(function(td) {
+    td.style.minWidth = minNameW + 'px';
+    td.style.width = 'auto';
+    td.style.maxWidth = '';
+  });
+
+  rows.forEach(function(row) {
+    clip_onboard_text(row.querySelector('.col_name .epg_title'), 10);
+  });
 }
 
 function whatson_epg_title_html(title) {

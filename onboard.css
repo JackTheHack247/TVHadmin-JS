@@ -503,22 +503,32 @@ html.screen-onboard.page-recordings #content #list .col_name .epg_subtitle {
 
 html.screen-onboard.page-recordings #content #list .col_date {
 	width: var(--wb-rec-date-width) !important;
+	overflow: visible !important;
+	white-space: nowrap !important;
 }
 
 html.screen-onboard.page-recordings #content #list .col_time {
 	width: var(--wb-rec-time-width) !important;
+	white-space: nowrap !important;
 }
 
 html.screen-onboard.page-recordings #content #list .col_channel {
-	width: var(--wb-rec-channel-width) !important;
+	width: auto !important;
+	overflow: visible !important;
+	white-space: nowrap !important;
 }
 
 html.screen-onboard.page-recordings #content #list .col_name {
 	width: auto !important;
+	min-width: 10ch;
 }
 
-html.screen-onboard.page-recordings #content #list .col_channel,
-html.screen-onboard.page-recordings #content #list .col_channel .channel_name,
+html.screen-onboard.page-recordings #content #list .col_channel .channel_name {
+	display: block;
+	white-space: nowrap !important;
+	overflow: visible !important;
+}
+
 html.screen-onboard.page-recordings #content #list .col_name .epg_title {
 	display: block;
 	white-space: nowrap !important;
