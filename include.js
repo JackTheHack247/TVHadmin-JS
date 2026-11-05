@@ -46,19 +46,16 @@ function measure_onboard_text(text, refEl) {
   return m.offsetWidth;
 }
 
-function clip_onboard_text(el, minChars) {
+function clip_onboard_text(el, maxChars) {
   if (!el) return;
   var full = restore_onboard_full_text(el);
   if (!full) return;
-  if (el.scrollWidth <= el.clientWidth + 1) return;
-  var min = Math.max(0, minChars || 0);
-  var n = full.length;
-  while (n > min) {
-    el.textContent = full.slice(0, n) + '..';
-    if (el.scrollWidth <= el.clientWidth + 1) return;
-    n--;
+  var max = Math.max(0, maxChars || 0);
+  if (full.length <= max) {
+    el.textContent = full;
+    return;
   }
-  el.textContent = full.length > min ? full.slice(0, min) + '..' : full;
+  el.textContent = full.slice(0, max) + '..';
 }
 
 function set_rec_col_width(table, cls, px, lock) {
@@ -99,7 +96,7 @@ function clip_onboard_recording_rows() {
   var timeCell = rows[0].querySelector('.col_time');
   var timeW = timeCell ? timeCell.offsetWidth : 72;
   var actionW = 12;
-  var minNameW = measure_onboard_text('MMMMMMMMM', ref) + pad;
+  var minNameW = measure_onboard_text('MMMMMMMMM..', ref) + pad;
   var tableW = table.clientWidth;
   var nameW = tableW - dateW - timeW - chanW - actionW;
   if (nameW < minNameW) {
