@@ -262,7 +262,9 @@ function activate_config_row(row, idx) {
 function init_config_keyboard() {
   init_content_keyboard({
     getItems: function() {
-      return Array.from(document.querySelectorAll('#config .config-list tr.row_alt'));
+      return Array.from(document.querySelectorAll('#config .config-list tr.row_alt')).filter(function(row) {
+        return row.offsetParent !== null;
+      });
     },
     topBar: document.querySelector('#config .config-top-bar'),
     hasTopBar: function() { return true; },

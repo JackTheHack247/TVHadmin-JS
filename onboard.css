@@ -22,7 +22,7 @@ html.screen-onboard {
 	--wb-logo-height: 110px;
 	--wb-onboard-logo-scale: 2;
 	--wb-onboard-logo-x: 0px;
-	--wb-onboard-logo-y: 24px;
+	--wb-onboard-logo-y: 12px;
 	--wb-nav-gap: 0px;
 	--wb-whatson-duration-width: 10%;
 	--wb-whatson-channel-width: 19%;
@@ -515,7 +515,43 @@ html.screen-onboard.page-links #content #list td:nth-child(3) { width: 64px; }
 html.screen-onboard.page-links #content #list td:nth-child(4) { width: auto; }
 html.screen-onboard.page-links #content #list td:nth-child(6) { width: 22px; padding: 4px 2px; text-align: center; }
 
-/* ---- Config: same label | value table, squeezed to fit the width (no sideways scrolling) */
+/* ---- Config: header stays put; the list underneath scrolls */
+
+html.screen-onboard #config {
+	display: flex !important;
+	flex-direction: column !important;
+	height: 100% !important;
+	max-height: 100% !important;
+	overflow: hidden !important;
+}
+
+html.screen-onboard #config .config-top-bar {
+	flex: 0 0 auto !important;
+	flex-wrap: nowrap !important;
+	min-width: 0;
+	overflow: visible !important;
+}
+
+html.screen-onboard #config .config-actions {
+	flex-wrap: nowrap;
+	flex-shrink: 0;
+}
+
+html.screen-onboard #config .config-actions button {
+	flex-shrink: 0;
+	height: 32px;
+	padding: 4px 8px;
+	margin-left: 8px;
+	line-height: 24px !important;
+	overflow: visible;
+}
+
+html.screen-onboard #config form {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
 
 html.screen-onboard #config table,
 html.screen-onboard #config .config-list {
@@ -529,24 +565,24 @@ html.screen-onboard #config th {
 	white-space: normal !important;
 	overflow-wrap: break-word;
 	word-wrap: break-word;
-	overflow: hidden;
 }
 
 html.screen-onboard #config .config-list .col_label {
 	width: 40% !important;
 	padding: 4px;
+	overflow: hidden;
 }
 
 html.screen-onboard #config .config-list .col_value {
 	width: 60% !important;
 	padding: 4px;
+	overflow: visible;
 }
 
 html.screen-onboard #config input[type=text],
 html.screen-onboard #config input[type=number],
 html.screen-onboard #config input[type=password],
 html.screen-onboard #config input[type=url],
-html.screen-onboard #config select,
 html.screen-onboard #config textarea {
 	width: 100% !important;
 	min-width: 0 !important;
@@ -554,18 +590,37 @@ html.screen-onboard #config textarea {
 	height: 32px;
 	padding: 4px;
 	box-sizing: border-box;
+	line-height: 24px !important;
+}
+
+html.screen-onboard #config select {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100% !important;
+	min-width: 0 !important;
+	max-width: 100% !important;
+	height: 36px;
+	padding: 0 24px 0 6px;
+	box-sizing: border-box;
+	line-height: 36px !important;
+	overflow: hidden;
+	background-color: var(--wb-panel-light);
+	background-image: linear-gradient(45deg, transparent 50%, var(--wb-text) 50%),
+		linear-gradient(135deg, var(--wb-text) 50%, transparent 50%);
+	background-position: calc(100% - 14px) calc(50% - 3px), calc(100% - 8px) calc(50% - 3px);
+	background-size: 6px 6px, 6px 6px;
+	background-repeat: no-repeat;
 }
 
 html.screen-onboard #config select[multiple],
 html.screen-onboard #config select[size],
 html.screen-onboard #config select.kb-field-edit {
-	height: auto;
-	max-height: 140px;
-}
-
-html.screen-onboard #config .config-top-bar {
-	flex-wrap: wrap;
-	min-width: 0;
+	height: auto !important;
+	max-height: 168px;
+	padding: 4px;
+	line-height: 24px !important;
+	background-image: none;
+	overflow-y: auto;
 }
 
 html.screen-onboard #config input[type=checkbox] {
