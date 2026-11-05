@@ -83,21 +83,22 @@ function clip_onboard_recording_rows() {
 
   var ref = rows[0].querySelector('.col_name .epg_title') || rows[0];
   var pad = 8;
-  var dateW = measure_onboard_text('00/00/00', ref) + pad;
+  var gap = 14;
+  var dateW = measure_onboard_text('00/00/00', ref) + pad + gap;
   var chanW = 0;
   rows.forEach(function(row) {
     var d = row.querySelector('.col_date');
     var c = row.querySelector('.col_channel .channel_name');
-    if (d) dateW = Math.max(dateW, d.scrollWidth + pad);
-    if (c) chanW = Math.max(chanW, measure_onboard_text(c.getAttribute('data-full') || c.textContent, c) + pad);
+    if (d) dateW = Math.max(dateW, d.scrollWidth + pad + gap);
+    if (c) chanW = Math.max(chanW, measure_onboard_text(c.getAttribute('data-full') || c.textContent, c) + pad + gap);
   });
   var headChan = table.querySelector('tr.heading .col_channel');
-  if (headChan) chanW = Math.max(chanW, measure_onboard_text(headChan.textContent, ref) + pad);
+  if (headChan) chanW = Math.max(chanW, measure_onboard_text(headChan.textContent, ref) + pad + gap);
 
   var timeCell = rows[0].querySelector('.col_time');
   var timeW = timeCell ? timeCell.offsetWidth : 72;
-  var actionW = 16;
-  var minNameW = measure_onboard_text('MMMMMMMMMM', ref) + pad;
+  var actionW = 12;
+  var minNameW = measure_onboard_text('MMMMMMMMMM', ref) + pad + 12;
   var tableW = table.clientWidth;
   var maxChan = tableW - dateW - timeW - actionW - minNameW;
   if (maxChan < 48) maxChan = 48;
@@ -105,6 +106,7 @@ function clip_onboard_recording_rows() {
 
   set_rec_col_width(table, 'col_date', dateW, true);
   set_rec_col_width(table, 'col_channel', chanW, true);
+  set_rec_col_width(table, 'col_action', actionW, true);
   table.querySelectorAll('td.col_name').forEach(function(td) {
     td.style.minWidth = minNameW + 'px';
     td.style.width = 'auto';

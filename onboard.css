@@ -31,12 +31,12 @@ html.screen-onboard {
 	--wb-whatson-play-width: 0%;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
-	--wb-rec-date-width: 96px;
+	--wb-rec-date-width: 108px;
 	--wb-rec-time-width: 72px;
-	--wb-rec-channel-width: 80px;
+	--wb-rec-channel-width: 96px;
 	--wb-rec-length-width: 0px;
 	--wb-rec-name-width: auto;
-	--wb-rec-action-width: 16px;
+	--wb-rec-action-width: 12px;
 }
 
 html.screen-onboard *,
@@ -505,6 +505,7 @@ html.screen-onboard.page-recordings #content #list .col_date {
 	width: var(--wb-rec-date-width) !important;
 	overflow: visible !important;
 	white-space: nowrap !important;
+	padding-right: 12px !important;
 }
 
 html.screen-onboard.page-recordings #content #list .col_time {
@@ -516,11 +517,13 @@ html.screen-onboard.page-recordings #content #list .col_channel {
 	width: auto !important;
 	overflow: visible !important;
 	white-space: nowrap !important;
+	padding-right: 12px !important;
 }
 
 html.screen-onboard.page-recordings #content #list .col_name {
 	width: auto !important;
 	min-width: 10ch;
+	padding-right: 4px !important;
 }
 
 html.screen-onboard.page-recordings #content #list .col_channel .channel_name {
@@ -539,11 +542,17 @@ html.screen-onboard.page-recordings #content #list .col_name .epg_title {
 html.screen-onboard.page-recordings #content #list .col_action {
 	width: var(--wb-rec-action-width) !important;
 	max-width: var(--wb-rec-action-width) !important;
-	padding: 0 2px 0 0 !important;
+	padding: 0 !important;
 	text-align: right;
+	border-right: none !important;
+}
+
+html.screen-onboard.page-recordings #content tr.content-delete-focus td.col_action {
+	box-shadow: none;
 }
 
 html.screen-onboard.page-recordings #content .rec-delete-label {
+	display: block !important;
 	padding: 0 !important;
 	margin: 0 !important;
 	border: none !important;
@@ -551,6 +560,7 @@ html.screen-onboard.page-recordings #content .rec-delete-label {
 	color: var(--wb-danger) !important;
 	font-size: 18px !important;
 	line-height: 24px !important;
+	text-align: right;
 }
 
 /* Timers: status, date + times, name, delete (channel, mode, on/off hidden) */
