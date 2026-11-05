@@ -285,11 +285,24 @@ def main():
     try:
         load_gtk()
     except Exception as exc:
-        sys.stderr.write(
-            "GTK/WebKit not installed.\n"
-            "  sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 python3-vlc vlc\n"
-            "(%s)\n" % exc
-        )
+        if sys.platform == "win32":
+            sys.stderr.write(
+                "This player is for the Raspberry Pi, not Windows.\n"
+                "Copy the project to the Pi, then run:\n"
+                "  sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 gir1.2-webkit2-4.0 python3-vlc vlc\n"
+                "  python3 scripts/tvhadmin_player.py\n"
+            )
+        else:
+            sys.stderr.write(
+                "GTK/WebKit not installed (needed to draw the menus).\n"
+                "On the Pi run:\n"
+                "  sudo apt update\n"
+                "  sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0 python3-vlc vlc\n"
+                "  sudo apt install gir1.2-webkit2-4.1 || sudo apt install gir1.2-webkit2-4.0\n"
+                "Then start it again:\n"
+                "  python3 %s\n"
+                "Detail: %s\n" % (os.path.abspath(__file__), exc)
+            )
         sys.exit(1)
     import tvhadmin_vlc_helper as helper
 
