@@ -97,9 +97,39 @@
     });
   }
 
+  function strip_onboard_play_col() {
+    if (!is_onboard_screen()) return;
+    var table = document.getElementById('list');
+    if (!table) return;
+    var col = table.querySelector('col.whatson-col-stream');
+    if (col && col.parentNode) col.parentNode.removeChild(col);
+    var head = table.querySelector('thead td[colspan]');
+    if (head) head.colSpan = 4;
+  }
+
+  // Description takes whatever width is left after progress, channel and title.
+  function fit_onboard_desc_col() {
+    if (!is_onboard_screen()) return;
+    var table = document.getElementById('list');
+    if (!table) return;
+    var row = table.querySelector('tbody tr.row_alt');
+    if (!row) return;
+    var used = 0;
+    ['col_duration', 'col_channel', 'col_title'].forEach(function(cls) {
+      var cell = row.querySelector('td.' + cls);
+      if (cell) used += cell.offsetWidth;
+    });
+    var descW = Math.max(80, table.clientWidth - used);
+    var descCol = table.querySelector('col.whatson-col-desc');
+    if (descCol) descCol.style.width = descW + 'px';
+    var cells = table.querySelectorAll('td.col_desc');
+    for (var i = 0; i < cells.length; i++) cells[i].style.width = descW + 'px';
+  }
+
   // Onboard: the progress bar fills its cell and the description shows as many
   // lines as the channel/title made the row, without making the row taller.
   function fit_onboard_rows() {
+    fit_onboard_desc_col();
     var rows = document.querySelectorAll('#whatson #list tbody tr.row_alt');
     var parts = [];
     rows.forEach(function(row) {
@@ -158,7 +188,9 @@
         }
         else s += `<span class="channel_label">${name}</span></div></td><td class='col_title'>No EPG available</td><td class='col_desc'></td>`;
       }
-      s += `<td class='col_stream'><a href='#' onclick='play_now_row(this.closest("tr")); return false;'><img src='images/play.png' title='Play'></a></td>`;
+      if (!is_onboard_screen()) {
+        s += `<td class='col_stream'><a href='#' onclick='play_now_row(this.closest("tr")); return false;'><img src='images/play.png' title='Play'></a></td>`;
+      }
       row.dataset.uuid = c.uuid;
       row.dataset.name = name;
       if (e) {
@@ -244,6 +276,7 @@
     [ tags, channels ] = await Promise.all([get_channeltags(), get_channels(lcn)]);
     media = build_media_filter('Now_', tags);
     document.getElementById("mediatags").innerHTML = build_tag_checkboxes('Now_');
+    strip_onboard_play_col();
 
     update(1);
     init_content_keyboard({

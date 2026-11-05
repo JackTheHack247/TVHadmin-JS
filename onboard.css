@@ -22,13 +22,13 @@ html.screen-onboard {
 	--wb-logo-height: 110px;
 	--wb-onboard-logo-scale: 2;
 	--wb-onboard-logo-x: 0px;
-	--wb-onboard-logo-y: 0px;
+	--wb-onboard-logo-y: 24px;
 	--wb-nav-gap: 0px;
-	--wb-whatson-duration-width: 48px;
-	--wb-whatson-channel-width: 96px;
-	--wb-whatson-title-width: 120px;
-	--wb-whatson-desc-width: calc(100% - 264px);
-	--wb-whatson-play-width: 0px;
+	--wb-whatson-duration-width: 10%;
+	--wb-whatson-channel-width: 19%;
+	--wb-whatson-title-width: 24%;
+	--wb-whatson-desc-width: 47%;
+	--wb-whatson-play-width: 0%;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
 	--wb-rec-date-width: 76px;
@@ -118,8 +118,9 @@ html.screen-onboard #navigation {
 }
 
 html.screen-onboard #navigation .logo {
-	flex: 0 0 var(--wb-logo-height) !important;
-	height: var(--wb-logo-height) !important;
+	flex: 1 1 auto !important;
+	height: auto !important;
+	min-height: var(--wb-logo-height) !important;
 	width: 100% !important;
 	min-width: 0 !important;
 	padding: 0 !important;
@@ -158,14 +159,13 @@ html.screen-onboard #navigation .tl-bar {
 }
 
 html.screen-onboard #navigation .nav_bar {
-	display: flex !important;
-	flex-direction: column !important;
-	justify-content: flex-end !important;
-	flex: 1 1 auto !important;
+	display: block !important;
+	flex: 0 0 auto !important;
 	min-height: 0;
 	margin-top: 0;
+	background: transparent !important;
 	overflow-x: hidden !important;
-	overflow-y: auto !important;
+	overflow-y: visible !important;
 }
 
 html.screen-onboard #navigation .navi {
@@ -328,9 +328,14 @@ html.screen-onboard #whatson .list col.whatson-col-desc,
 html.screen-onboard #whatson td.col_desc {
 	width: var(--wb-whatson-desc-width) !important;
 }
-html.screen-onboard #whatson .list col.whatson-col-stream {
+html.screen-onboard #whatson .list col.whatson-col-stream,
+html.screen-onboard #whatson td.col_stream {
 	display: none !important;
 	width: 0 !important;
+	max-width: 0 !important;
+	padding: 0 !important;
+	border: none !important;
+	overflow: hidden !important;
 }
 html.screen-onboard #whatson .list > tbody > tr > td {
 	border-width: 2px;
