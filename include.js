@@ -470,23 +470,69 @@ function clear_pending_record() {
   sessionStorage.removeItem('pending_record');
 }
 
+async function pending_from_current_channel() {
+  var uuid = sessionStorage.getItem('preview_uuid');
+  var name = sessionStorage.getItem('preview_name') || '';
+  var type = sessionStorage.getItem('preview_type');
+  if (!uuid || type === 'recording') return null;
+  var events = await get_epg_now(uuid);
+  if (!events.length && name) events = await get_epg_now(name);
+  var ev = find_epg_now_event(events, { uuid: uuid, name: name }, name);
+  if (!ev || !ev.eventId) return { uuid: uuid, channel: name, title: name, eventId: '' };
+  return {
+    eventId: String(ev.eventId),
+    uuid: uuid,
+    channel: name,
+    title: ev.title || name,
+    subtitle: ev.summary || ev.subtitle || ''
+  };
+}
+
+async function start_channel_recording(uuid, name) {
+  await ensure_recording_profile();
+  var now = Math.floor(Date.now() / 1000);
+  var conf = {
+    enabled: true,
+    channel: uuid,
+    start: now,
+    stop: now + 7200,
+    title: { eng: name || 'Recording' }
+  };
+  try {
+    var response = await fetch(
+      api_url('/api/dvr/entry/create?conf=' + encodeURIComponent(JSON.stringify(conf))),
+      fetch_opts()
+    );
+    return !!(response && response.ok);
+  } catch (e) {
+    return false;
+  }
+}
+
 async function start_pending_recording() {
-  const pending = get_pending_record();
-  if (!pending || !pending.eventId) {
-    alert('Play a show first, then use Start Recording here.');
+  var pending = get_pending_record();
+  if (!pending || !pending.eventId) pending = await pending_from_current_channel();
+  if (!pending) {
+    alert('Play a show first, then start recording.');
     return false;
   }
   await ensure_recording_profile();
-  try {
-    const response = await fetch(
-      api_url(`/api/dvr/entry/create_by_event?event_id=${pending.eventId}${dvr_config_query()}`),
-      fetch_opts()
-    );
-    if (response.ok) {
-      clear_pending_record();
-      return true;
-    }
-  } catch (e) {}
+  if (pending.eventId) {
+    try {
+      const response = await fetch(
+        api_url(`/api/dvr/entry/create_by_event?event_id=${pending.eventId}${dvr_config_query()}`),
+        fetch_opts()
+      );
+      if (response.ok) {
+        clear_pending_record();
+        return true;
+      }
+    } catch (e) {}
+  }
+  if (pending.uuid && await start_channel_recording(pending.uuid, pending.title || pending.channel)) {
+    clear_pending_record();
+    return true;
+  }
   alert('Could not start recording.');
   return false;
 }

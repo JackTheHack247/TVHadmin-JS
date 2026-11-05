@@ -22,7 +22,7 @@ html.screen-onboard {
 	--wb-logo-height: 110px;
 	--wb-onboard-logo-scale: 2;
 	--wb-onboard-logo-x: 0px;
-	--wb-onboard-logo-y: 12px;
+	--wb-onboard-logo-y: 6px;
 	--wb-nav-gap: 0px;
 	--wb-whatson-duration-width: 10%;
 	--wb-whatson-channel-width: 19%;
@@ -31,12 +31,12 @@ html.screen-onboard {
 	--wb-whatson-play-width: 0%;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
-	--wb-rec-date-width: 76px;
-	--wb-rec-time-width: 0px;
+	--wb-rec-date-width: 80px;
+	--wb-rec-time-width: 56px;
 	--wb-rec-channel-width: 0px;
 	--wb-rec-length-width: 0px;
 	--wb-rec-name-width: auto;
-	--wb-rec-action-width: 52px;
+	--wb-rec-action-width: 24px;
 }
 
 html.screen-onboard *,
@@ -475,18 +475,66 @@ html.screen-onboard #content .list td img {
 	image-rendering: auto;
 }
 
-/* Recordings: date, name, delete (time, channel, length, summary hidden) */
-html.screen-onboard.page-recordings #content #list .col_time,
+/* Recordings: date, time, name, small X. Channel/length/summary hidden. */
+html.screen-onboard.page-recordings #content .rec-top-bar {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+	flex-wrap: nowrap !important;
+}
+
+html.screen-onboard.page-recordings #content .rec-top-actions {
+	flex-shrink: 0;
+}
+
+html.screen-onboard.page-recordings #content #recording-action {
+	display: inline-block !important;
+	height: 32px;
+	padding: 4px 8px;
+	margin-left: 8px;
+	line-height: 24px !important;
+	white-space: nowrap;
+}
+
 html.screen-onboard.page-recordings #content #list .col_channel,
 html.screen-onboard.page-recordings #content #list .col_length,
 html.screen-onboard.page-recordings #content #list .col_name .epg_subtitle {
 	display: none;
 }
 
+html.screen-onboard.page-recordings #content #list .col_date {
+	width: var(--wb-rec-date-width) !important;
+}
+
+html.screen-onboard.page-recordings #content #list .col_time {
+	width: var(--wb-rec-time-width) !important;
+}
+
+html.screen-onboard.page-recordings #content #list .col_name {
+	width: auto !important;
+}
+
 html.screen-onboard.page-recordings #content #list .col_name .epg_title {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+html.screen-onboard.page-recordings #content #list .col_action {
+	width: var(--wb-rec-action-width) !important;
+	max-width: var(--wb-rec-action-width) !important;
+	padding: 2px 0 !important;
+	text-align: center;
+}
+
+html.screen-onboard.page-recordings #content .rec-delete-label {
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+	background: transparent !important;
+	color: var(--wb-danger) !important;
+	font-size: 18px !important;
+	line-height: 24px !important;
 }
 
 /* Timers: status, date + times, name, delete (channel, mode, on/off hidden) */
