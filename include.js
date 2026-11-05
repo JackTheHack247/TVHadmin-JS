@@ -1947,6 +1947,10 @@ async function play_in_external_vlc(uuid, name, type, forceProfile) {
   close_menu_overlay();
   await launch_external_vlc(url, name, is_radio_channel(name, uuid));
   enter_external_tv_video_mode();
+  if (type === 'channel') {
+    var ch = channel_info_cache[uuid] || { uuid: uuid, name: name };
+    void live_watch_osd(ch, name);
+  }
 }
 
 async function preview_channel(uuid, name) {
@@ -1993,6 +1997,36 @@ function zap_channel_list() {
   return list;
 }
 
+function post_watch_osd(kind, data) {
+  var helper = vlc_helper_base();
+  if (!helper) return;
+  var body = Object.assign({ kind: kind }, data || {});
+  fetch(helper + '/osd', {
+    method: 'POST',
+    mode: 'cors',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(function() {});
+}
+
+async function live_watch_osd(ch, displayName) {
+  var channel = displayName || (ch && ch.name) || '';
+  var title = '';
+  var pct = 0;
+  try {
+    var events = await get_epg_now((ch && ch.uuid) || channel);
+    var ev = find_epg_now_event(events, ch || { uuid: '', name: channel }, channel);
+    if (ev) {
+      title = ev.title || '';
+      var now = Date.now() / 1000;
+      var dur = ev.stop - ev.start;
+      if (dur > 0) pct = Math.max(0, Math.min(100, 100 * (now - ev.start) / dur));
+    }
+  } catch (e) {}
+  post_watch_osd('live', { channel: channel, title: title, percent: pct });
+}
+
 async function zap_watch_channel(delta) {
   if (_zap_busy) return;
   _zap_busy = true;
@@ -2013,7 +2047,19 @@ async function zap_watch_channel(delta) {
   var next = list[(idx + delta + list.length * 10) % list.length];
   if (!next || next.uuid === cur) return;
   var name = next.number ? (next.number + ' ' + next.name) : next.name;
-  preview_channel(next.uuid, name);
+  await preview_channel(next.uuid, name);
+  void live_watch_osd(next, name);
+}
+
+function shuttle_watch(direction) {
+  var helper = vlc_helper_base();
+  if (helper) {
+    fetch(helper + '/shuttle?dir=' + encodeURIComponent(String(direction)), {
+      method: 'GET', mode: 'cors', cache: 'no-store'
+    }).catch(function() {});
+    return;
+  }
+  seek_watch(direction * 5);
 }
 
 function seek_watch(seconds) {
@@ -2035,10 +2081,8 @@ function seek_watch(seconds) {
 function handle_watch_key(key) {
   if (!key) return false;
   if (watching_recording()) {
-    if (key === 'ArrowLeft') { seek_watch(-30); return true; }
-    if (key === 'ArrowRight') { seek_watch(30); return true; }
-    if (key === 'ArrowUp') { seek_watch(60); return true; }
-    if (key === 'ArrowDown') { seek_watch(-60); return true; }
+    if (key === 'ArrowLeft' || key === 'ArrowDown') { shuttle_watch(-1); return true; }
+    if (key === 'ArrowRight' || key === 'ArrowUp') { shuttle_watch(1); return true; }
     return false;
   }
   if (key === 'ArrowUp' || key === 'ArrowLeft') { void zap_watch_channel(-1); return true; }

@@ -35,7 +35,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 DEFAULT_PORT = 8765
 BIND = "127.0.0.1"
 APP_WM_CLASS = "tvhremote"
-VERSION = "16"
+VERSION = "17"
 
 STREAM_PATH = re.compile(
     r"^/(?:play/ticket/(?:stream/|dvrfile/)|dvrfile/|stream/(?:channel|file|channelid|channelnumber|channelname)/)",
@@ -866,6 +866,17 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._json(200, {"ok": False, "error": "no player"})
             return
+        if path == "/shuttle":
+            try:
+                direction = int(qs.get("dir", ["0"])[0])
+            except (TypeError, ValueError):
+                direction = 0
+            if direction and _play_backend and hasattr(_play_backend, "shuttle"):
+                _play_backend.shuttle(direction)
+                self._json(200, {"ok": True})
+                return
+            self._json(200, {"ok": False, "error": "no player"})
+            return
         if path == "/hotkey-pending":
             self._json(200, {"ok": True, "action": consume_hotkey_action()})
             return
@@ -883,17 +894,32 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"ok": False, "error": "not found"})
 
     def do_POST(self):
-        if urlparse(self.path).path == "/play":
-            url, title = "", None
-            length = int(self.headers.get("Content-Length") or 0)
-            if 0 < length < 8192:
-                try:
-                    body = json.loads(self.rfile.read(length).decode("utf-8"))
-                    url = body.get("url") or ""
-                    title = body.get("title")
-                except Exception:
-                    pass
-            self._play(url, title=title)
+        path = urlparse(self.path).path
+        body = {}
+        length = int(self.headers.get("Content-Length") or 0)
+        if 0 < length < 8192:
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+            except Exception:
+                body = {}
+        if path == "/play":
+            self._play(body.get("url") or "", title=body.get("title"))
+            return
+        if path == "/osd":
+            if _play_backend and hasattr(_play_backend, "show_osd"):
+                _play_backend.show_osd(body)
+            self._json(200, {"ok": True})
+            return
+        if path == "/shuttle":
+            try:
+                direction = int(body.get("dir") or body.get("direction") or 0)
+            except (TypeError, ValueError):
+                direction = 0
+            if direction and _play_backend and hasattr(_play_backend, "shuttle"):
+                _play_backend.shuttle(direction)
+                self._json(200, {"ok": True})
+                return
+            self._json(200, {"ok": False, "error": "no player"})
             return
         self._json(404, {"ok": False, "error": "not found"})
 

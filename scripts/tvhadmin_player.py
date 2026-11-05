@@ -109,6 +109,12 @@ class PlayBackend(object):
     def seek(self, seconds):
         self.app.idle(self.app.seek_media, seconds)
 
+    def shuttle(self, direction):
+        self.app.idle(self.app.handle_rec_arrow, "ArrowLeft" if direction < 0 else "ArrowRight")
+
+    def show_osd(self, payload):
+        self.app.idle(self.app.show_live_osd, payload or {})
+
 
 class PlayerApp(object):
     def __init__(self, helper, port):
@@ -126,6 +132,11 @@ class PlayerApp(object):
         self.instance = None
         self._xid_ready = False
         self._is_recording = False
+        self._shuttle_dir = 0
+        self._shuttle_idx = -1
+        self._shuttle_speed = 1
+        self._shuttle_timer = None
+        self._shuttle_idle = None
         self._show_cursor = "--show-cursor" in sys.argv
 
         self.window = Gtk.Window(title="TVHadmin")
@@ -339,6 +350,7 @@ python3 scripts/tvhadmin_player.py</pre>
         self.player.set_media(media)
         self._bind_window()
         self._is_recording = "dvrfile" in (url or "").lower() or "/dvr/" in (url or "").lower()
+        self._stop_shuttle()
         self.backend.set_playing(True)
         self.show_video()
         self.player.play()
@@ -362,6 +374,182 @@ python3 scripts/tvhadmin_player.py</pre>
             self.helper.log_event("Seek failed: %s" % exc)
         return False
 
+    def _fmt_ms(self, ms):
+        s = max(0, int(ms / 1000))
+        h, s = divmod(s, 3600)
+        m, s = divmod(s, 60)
+        if h:
+            return "%d:%02d:%02d" % (h, m, s)
+        return "%d:%02d" % (m, s)
+
+    def _pct_bar(self, pct, width=12):
+        pct = max(0, min(100, int(pct or 0)))
+        fill = int(round(width * pct / 100.0))
+        fill = min(width, max(0, fill))
+        return ("=" * fill) + ("-" * (width - fill))
+
+    def _marquee(self, text, position, timeout_ms=3500, size=22):
+        if not self.player or not self.vlc_mod:
+            return
+        try:
+            opt = self.vlc_mod.VideoMarqueeOption
+            p = self.player
+            p.video_set_marquee_int(opt.Enable, 1)
+            p.video_set_marquee_int(opt.Size, size)
+            p.video_set_marquee_int(opt.Position, position)
+            p.video_set_marquee_int(opt.Timeout, int(timeout_ms))
+            p.video_set_marquee_int(opt.Opacity, 230)
+            p.video_set_marquee_string(opt.Text, text.replace("\n", "\r"))
+        except Exception as exc:
+            self.helper.log_event("OSD failed: %s" % exc)
+
+    def _hide_marquee(self):
+        if not self.player or not self.vlc_mod:
+            return
+        try:
+            self.player.video_set_marquee_int(self.vlc_mod.VideoMarqueeOption.Enable, 0)
+        except Exception:
+            pass
+
+    def show_live_osd(self, payload):
+        self._live_osd = payload or {}
+        self.GLib.timeout_add(500, self._show_live_osd_now)
+        return False
+
+    def _show_live_osd_now(self):
+        payload = getattr(self, "_live_osd", None) or {}
+        channel = (payload.get("channel") or "").strip()
+        title = (payload.get("title") or "").strip()
+        pct = payload.get("percent")
+        try:
+            pct = float(pct)
+        except (TypeError, ValueError):
+            pct = 0
+        lines = [channel or "Live"]
+        if title:
+            lines.append(title)
+        lines.append("%s  %d%%" % (self._pct_bar(pct), int(pct)))
+        self._marquee("\n".join(lines), position=6, timeout_ms=4000, size=22)
+        return False
+
+    def _rec_length(self):
+        try:
+            return int(self.player.get_length() or 0)
+        except Exception:
+            return 0
+
+    def _rec_time(self):
+        try:
+            t = int(self.player.get_time() or 0)
+            return t if t >= 0 else 0
+        except Exception:
+            return 0
+
+    def show_rec_osd(self):
+        length = max(1, self._rec_length())
+        t = min(self._rec_time(), length)
+        remain = max(0, length - t)
+        width = 22
+        pos = int(round(width * float(t) / float(length)))
+        pos = min(width, max(0, pos))
+        bar = ("=" * pos) + "|" + ("-" * (width - pos))
+        speed = ""
+        if self._shuttle_dir:
+            arrow = "<<" if self._shuttle_dir < 0 else ">>"
+            speed = "%s %dx\n" % (arrow, self._shuttle_speed)
+        text = "%s%s %s %s\n%s in               %s left" % (
+            speed,
+            self._fmt_ms(0),
+            bar,
+            self._fmt_ms(length),
+            self._fmt_ms(t),
+            self._fmt_ms(remain),
+        )
+        self._marquee(text, position=8, timeout_ms=2800, size=20)
+        return False
+
+    def _clear_timer(self, attr):
+        handle = getattr(self, attr)
+        if handle:
+            try:
+                self.GLib.source_remove(handle)
+            except Exception:
+                pass
+            setattr(self, attr, None)
+
+    def _stop_shuttle(self):
+        self._clear_timer("_shuttle_timer")
+        self._clear_timer("_shuttle_idle")
+        self._shuttle_dir = 0
+        self._shuttle_idx = -1
+        self._shuttle_speed = 1
+        if self.player:
+            try:
+                self.player.set_rate(1.0)
+            except Exception:
+                pass
+            try:
+                if self.player.is_playing() == 0 and self._is_recording:
+                    self.player.play()
+            except Exception:
+                pass
+        return False
+
+    def _shuttle_tick(self):
+        if not self._shuttle_dir or not self.player:
+            return False
+        jump = self._shuttle_dir * self._shuttle_speed * 0.12
+        self.seek_media(jump)
+        t = self._rec_time()
+        length = self._rec_length()
+        if length > 0 and (t <= 0 or t >= length - 400):
+            self._stop_shuttle()
+            self.show_rec_osd()
+            return False
+        self.show_rec_osd()
+        return True
+
+    def _arm_shuttle_idle(self):
+        self._clear_timer("_shuttle_idle")
+        self._shuttle_idle = self.GLib.timeout_add(1600, self._stop_shuttle)
+
+    def handle_rec_arrow(self, name):
+        if not self.player:
+            return False
+        direction = -1 if name in ("ArrowLeft", "ArrowDown") else 1
+        length = self._rec_length()
+        short = length > 0 and length < 5 * 60 * 1000
+        if length <= 0:
+            # length not ready yet — treat as short taps
+            short = True
+        if short:
+            self._stop_shuttle()
+            self.seek_media(5 * direction)
+            self.show_rec_osd()
+            return False
+        speeds = (2, 3, 4, 5)
+        if self._shuttle_dir != direction:
+            self._shuttle_dir = direction
+            self._shuttle_idx = 0
+        else:
+            self._shuttle_idx = min(self._shuttle_idx + 1, len(speeds) - 1)
+        self._shuttle_speed = speeds[self._shuttle_idx]
+        self._clear_timer("_shuttle_timer")
+        if direction > 0:
+            try:
+                self.player.set_rate(float(self._shuttle_speed))
+            except Exception:
+                self._shuttle_timer = self.GLib.timeout_add(100, self._shuttle_tick)
+        else:
+            try:
+                self.player.set_rate(1.0)
+            except Exception:
+                pass
+            self._shuttle_timer = self.GLib.timeout_add(100, self._shuttle_tick)
+        self._arm_shuttle_idle()
+        self.show_rec_osd()
+        return False
+
     def _run_js(self, code):
         try:
             self.webview.run_javascript(code, None, None, None)
@@ -372,6 +560,8 @@ python3 scripts/tvhadmin_player.py</pre>
                 pass
 
     def stop_media(self):
+        self._stop_shuttle()
+        self._hide_marquee()
         if self.player:
             try:
                 self.player.stop()
@@ -381,6 +571,7 @@ python3 scripts/tvhadmin_player.py</pre>
         self.show_menu()
 
     def show_menu(self):
+        self._stop_shuttle()
         self.stack.set_visible_child_name("menu")
         try:
             self.window.get_window().raise_()
@@ -429,8 +620,7 @@ python3 scripts/tvhadmin_player.py</pre>
         if not name:
             return False
         if self._is_recording:
-            secs = {"ArrowLeft": -30, "ArrowRight": 30, "ArrowUp": 60, "ArrowDown": -60}[name]
-            self.seek_media(secs)
+            self.handle_rec_arrow(name)
         else:
             self._run_js("handle_watch_key('%s')" % name)
         return True
