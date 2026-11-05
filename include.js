@@ -63,9 +63,10 @@ function clip_onboard_text(el, minChars) {
 
 function set_rec_col_width(table, cls, px, lock) {
   table.querySelectorAll('td.' + cls).forEach(function(td) {
-    td.style.width = px + 'px';
-    td.style.minWidth = px + 'px';
-    td.style.maxWidth = lock ? px + 'px' : '';
+    td.style.setProperty('width', px + 'px', 'important');
+    td.style.setProperty('min-width', px + 'px', 'important');
+    if (lock) td.style.setProperty('max-width', px + 'px', 'important');
+    else td.style.removeProperty('max-width');
   });
 }
 
@@ -83,7 +84,7 @@ function clip_onboard_recording_rows() {
 
   var ref = rows[0].querySelector('.col_name .epg_title') || rows[0];
   var pad = 8;
-  var gap = 14;
+  var gap = 16;
   var dateW = measure_onboard_text('00/00/00', ref) + pad + gap;
   var chanW = 0;
   rows.forEach(function(row) {
@@ -98,23 +99,29 @@ function clip_onboard_recording_rows() {
   var timeCell = rows[0].querySelector('.col_time');
   var timeW = timeCell ? timeCell.offsetWidth : 72;
   var actionW = 12;
-  var minNameW = measure_onboard_text('MMMMMMMMMM', ref) + pad + 12;
+  var minNameW = measure_onboard_text('MMMMMMMMMMMMMMM', ref) + pad;
   var tableW = table.clientWidth;
-  var maxChan = tableW - dateW - timeW - actionW - minNameW;
-  if (maxChan < 48) maxChan = 48;
-  if (chanW > maxChan) chanW = maxChan;
+  var nameW = tableW - dateW - timeW - chanW - actionW;
+  if (nameW < minNameW) {
+    var squeeze = minNameW - nameW;
+    var extra = Math.max(0, gap - 8);
+    var fromGap = Math.min(squeeze, extra * 2);
+    dateW -= fromGap / 2;
+    chanW -= fromGap / 2;
+    nameW = tableW - dateW - timeW - chanW - actionW;
+  }
+  if (nameW < minNameW) nameW = minNameW;
 
   set_rec_col_width(table, 'col_date', dateW, true);
   set_rec_col_width(table, 'col_channel', chanW, true);
+  set_rec_col_width(table, 'col_name', nameW, false);
   set_rec_col_width(table, 'col_action', actionW, true);
   table.querySelectorAll('td.col_name').forEach(function(td) {
-    td.style.minWidth = minNameW + 'px';
-    td.style.width = 'auto';
-    td.style.maxWidth = '';
+    td.style.setProperty('min-width', minNameW + 'px', 'important');
   });
 
   rows.forEach(function(row) {
-    clip_onboard_text(row.querySelector('.col_name .epg_title'), 10);
+    clip_onboard_text(row.querySelector('.col_name .epg_title'), 15);
   });
 }
 
