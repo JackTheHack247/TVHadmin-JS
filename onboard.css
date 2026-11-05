@@ -24,10 +24,10 @@ html.screen-onboard {
 	--wb-onboard-logo-x: 0px;
 	--wb-onboard-logo-y: 0px;
 	--wb-nav-gap: 0px;
-	--wb-whatson-duration-width: 56px;
-	--wb-whatson-channel-width: 112px;
-	--wb-whatson-title-width: 152px;
-	--wb-whatson-desc-width: auto;
+	--wb-whatson-duration-width: 48px;
+	--wb-whatson-channel-width: 96px;
+	--wb-whatson-title-width: 120px;
+	--wb-whatson-desc-width: calc(100% - 264px);
 	--wb-whatson-play-width: 0px;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
@@ -158,8 +158,10 @@ html.screen-onboard #navigation .tl-bar {
 }
 
 html.screen-onboard #navigation .nav_bar {
-	display: block !important;
-	flex: 0 0 auto !important;
+	display: flex !important;
+	flex-direction: column !important;
+	justify-content: flex-end !important;
+	flex: 1 1 auto !important;
 	min-height: 0;
 	margin-top: 0;
 	overflow-x: hidden !important;
@@ -169,7 +171,11 @@ html.screen-onboard #navigation .nav_bar {
 html.screen-onboard #navigation .navi {
 	border-right: none !important;
 	border-bottom: 2px solid var(--wb-border) !important;
-	flex-shrink: 1;
+	flex-shrink: 0;
+}
+
+html.screen-onboard #navigation .navi:first-child {
+	border-top: 2px solid var(--wb-border) !important;
 }
 
 html.screen-onboard #navigation .navi a {
@@ -300,8 +306,32 @@ html.screen-onboard #content .col_channel img {
 	image-rendering: auto;
 }
 
-/* What's On: progress | channel | title | description on one line, two when
-   the channel or title wraps */
+/* What's On: progress | channel | title | description. Description takes
+   whatever is left of the 640px content area (no empty strip on the right). */
+html.screen-onboard #whatson .list {
+	width: 100% !important;
+	table-layout: fixed !important;
+}
+html.screen-onboard #whatson .list col.whatson-col-duration,
+html.screen-onboard #whatson td.col_duration {
+	width: var(--wb-whatson-duration-width) !important;
+}
+html.screen-onboard #whatson .list col.whatson-col-channel,
+html.screen-onboard #whatson td.col_channel {
+	width: var(--wb-whatson-channel-width) !important;
+}
+html.screen-onboard #whatson .list col.whatson-col-title,
+html.screen-onboard #whatson td.col_title {
+	width: var(--wb-whatson-title-width) !important;
+}
+html.screen-onboard #whatson .list col.whatson-col-desc,
+html.screen-onboard #whatson td.col_desc {
+	width: var(--wb-whatson-desc-width) !important;
+}
+html.screen-onboard #whatson .list col.whatson-col-stream {
+	display: none !important;
+	width: 0 !important;
+}
 html.screen-onboard #whatson .list > tbody > tr > td {
 	border-width: 2px;
 }
@@ -366,10 +396,11 @@ html.screen-onboard #whatson .list > tbody > tr > td.col_desc {
 html.screen-onboard #whatson .col_desc .epg_subtitle,
 html.screen-onboard #whatson tr.desc-wraps .col_desc .epg_subtitle {
 	display: block;
+	width: 100%;
 	max-height: 24px;
 	white-space: normal !important;
-	overflow-wrap: normal !important;
-	word-wrap: normal !important;
+	overflow-wrap: break-word !important;
+	word-wrap: break-word !important;
 	word-break: normal !important;
 	overflow: hidden;
 }

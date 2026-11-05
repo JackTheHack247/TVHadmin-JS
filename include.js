@@ -79,7 +79,7 @@ if (is_onboard_screen()) {
   onboardLink.type = 'text/css';
   onboardLink.href = 'onboard.css';
   document.head.appendChild(onboardLink);
-  WHATSON_TITLE_MAX_CHARS = 36;
+  WHATSON_TITLE_MAX_CHARS = 22;
   document.addEventListener('DOMContentLoaded', init_onboard_extras);
 }
 
