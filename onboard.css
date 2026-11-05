@@ -36,7 +36,7 @@ html.screen-onboard {
 	--wb-rec-channel-width: 96px;
 	--wb-rec-length-width: 0px;
 	--wb-rec-name-width: auto;
-	--wb-rec-action-width: 12px;
+	--wb-rec-action-width: 18px;
 }
 
 html.screen-onboard *,
@@ -540,7 +540,7 @@ html.screen-onboard.page-recordings #content #list .col_name .epg_title {
 html.screen-onboard.page-recordings #content #list .col_action {
 	width: var(--wb-rec-action-width) !important;
 	max-width: var(--wb-rec-action-width) !important;
-	padding: 0 !important;
+	padding: 0 2px 0 4px !important;
 	text-align: right;
 	border-right: none !important;
 }

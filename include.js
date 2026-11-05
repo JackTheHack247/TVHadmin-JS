@@ -95,7 +95,7 @@ function clip_onboard_recording_rows() {
 
   var timeCell = rows[0].querySelector('.col_time');
   var timeW = timeCell ? timeCell.offsetWidth : 72;
-  var actionW = 12;
+  var actionW = 18;
   var minNameW = measure_onboard_text('MMMMMMMMM..', ref) + pad;
   var tableW = table.clientWidth;
   var nameW = tableW - dateW - timeW - chanW - actionW;
