@@ -16,6 +16,30 @@ function escape_html_text(text) {
     .replace(/"/g, '&quot;');
 }
 
+function clip_onboard_text(el) {
+  if (!el) return;
+  var full = el.getAttribute('data-full');
+  if (full == null) {
+    full = String(el.textContent || '').replace(/\s+/g, ' ').trim();
+    el.setAttribute('data-full', full);
+    if (full) el.setAttribute('title', full);
+  }
+  el.textContent = full;
+  if (el.scrollWidth <= el.clientWidth + 1) return;
+  var n = full.length;
+  while (n > 0) {
+    el.textContent = full.slice(0, n) + '..';
+    if (el.scrollWidth <= el.clientWidth + 1) return;
+    n--;
+  }
+  el.textContent = '..';
+}
+
+function clip_onboard_recording_rows() {
+  if (!is_onboard_screen()) return;
+  document.querySelectorAll('#content #list tr.row_alt .col_channel .channel_name, #content #list tr.row_inprogress .col_channel .channel_name, #content #list tr.row_error .col_channel .channel_name, #content #list tr.row_alt .col_name .epg_title, #content #list tr.row_inprogress .col_name .epg_title, #content #list tr.row_error .col_name .epg_title').forEach(clip_onboard_text);
+}
+
 function whatson_epg_title_html(title) {
   if (!title) return '<div class="epg_title"></div>';
   var raw = String(title);

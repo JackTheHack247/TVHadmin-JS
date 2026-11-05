@@ -22,7 +22,7 @@ html.screen-onboard {
 	--wb-logo-height: 110px;
 	--wb-onboard-logo-scale: 2;
 	--wb-onboard-logo-x: 0px;
-	--wb-onboard-logo-y: 3px;
+	--wb-onboard-logo-y: 0px;
 	--wb-nav-gap: 0px;
 	--wb-whatson-duration-width: 10%;
 	--wb-whatson-channel-width: 19%;
@@ -31,9 +31,9 @@ html.screen-onboard {
 	--wb-whatson-play-width: 0%;
 	--wb-timeline-channel-width: 64px;
 	--wb-timeline-channel-width-lcn: 72px;
-	--wb-rec-date-width: 80px;
-	--wb-rec-time-width: 56px;
-	--wb-rec-channel-width: 0px;
+	--wb-rec-date-width: 96px;
+	--wb-rec-time-width: 72px;
+	--wb-rec-channel-width: 80px;
 	--wb-rec-length-width: 0px;
 	--wb-rec-name-width: auto;
 	--wb-rec-action-width: 16px;
@@ -496,7 +496,6 @@ html.screen-onboard.page-recordings #content #recording-action {
 	white-space: nowrap;
 }
 
-html.screen-onboard.page-recordings #content #list .col_channel,
 html.screen-onboard.page-recordings #content #list .col_length,
 html.screen-onboard.page-recordings #content #list .col_name .epg_subtitle {
 	display: none;
@@ -510,14 +509,21 @@ html.screen-onboard.page-recordings #content #list .col_time {
 	width: var(--wb-rec-time-width) !important;
 }
 
+html.screen-onboard.page-recordings #content #list .col_channel {
+	width: var(--wb-rec-channel-width) !important;
+}
+
 html.screen-onboard.page-recordings #content #list .col_name {
 	width: auto !important;
 }
 
+html.screen-onboard.page-recordings #content #list .col_channel,
+html.screen-onboard.page-recordings #content #list .col_channel .channel_name,
 html.screen-onboard.page-recordings #content #list .col_name .epg_title {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+	display: block;
+	white-space: nowrap !important;
+	overflow: hidden !important;
+	text-overflow: clip;
 }
 
 html.screen-onboard.page-recordings #content #list .col_action {
